@@ -60,6 +60,8 @@ Then configure:
 - `delete_test_case` - Delete a specific test case
 - `create_folder` - Create a new folder in Zephyr Scale
 - `get_test_run_cases` - Get test case keys from a test run
+- `create_test_run` - Create a new test run
+- `get_test_run` - Get detailed information about a specific test run
 
 ## Examples
 
@@ -103,7 +105,23 @@ Then configure:
 }
 ```
 
+### Create Test Run
+```json
+{
+  "project_key": "PROJ",
+  "name": "Sprint 1 Test Run",
+  "test_case_keys": ["PROJ-T123", "PROJ-T124", "PROJ-T125"],
+  "environment": "Production",
+  "description": "Testing core functionality for Sprint 1"
+}
+```
 
+### Get Test Run
+```json
+{
+  "test_run_key": "PROJ-R456"
+}
+```
 
 ## Authentication
 

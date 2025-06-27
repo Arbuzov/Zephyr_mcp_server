@@ -266,6 +266,71 @@ class ZephyrServer {
             required: ['test_case_key'],
           },
         },
+        {
+          name: 'create_test_run',
+          description: 'Create a new test run',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              project_key: {
+                type: 'string',
+                description: 'Project key (required)',
+              },
+              name: {
+                type: 'string',
+                description: 'Test run name (required)',
+              },
+              test_case_keys: {
+                type: 'array',
+                description: 'Array of test case keys to include in the test run',
+                items: { type: 'string' }
+              },
+              folder: {
+                type: 'string',
+                description: 'Folder path (optional)',
+              },
+              planned_start_date: {
+                type: 'string',
+                description: 'Planned start date in ISO format (optional)',
+              },
+              planned_end_date: {
+                type: 'string',
+                description: 'Planned end date in ISO format (optional)',
+              },
+              description: {
+                type: 'string',
+                description: 'Test run description (optional)',
+              },
+              owner: {
+                type: 'string',
+                description: 'Test run owner (optional)',
+              },
+              environment: {
+                type: 'string',
+                description: 'Test environment (optional)',
+              },
+              custom_fields: {
+                type: 'object',
+                description: 'Custom fields object (optional)',
+              },
+            },
+            required: ['project_key', 'name'],
+          },
+        },
+        {
+          name: 'get_test_run',
+          description: 'Get detailed information about a specific test run',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              test_run_key: {
+                type: 'string',
+                description: 'Test run key (e.g., PROJ-R123)',
+              },
+            },
+            required: ['test_run_key'],
+          },
+        },
       ],
     }));
 
@@ -286,6 +351,10 @@ class ZephyrServer {
             return await this.getTestRunCases(request.params.arguments);
           case 'delete_test_case':
             return await this.deleteTestCase(request.params.arguments);
+          case 'create_test_run':
+            return await this.createTestRun(request.params.arguments);
+          case 'get_test_run':
+            return await this.getTestRun(request.params.arguments);
           default:
             throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
         }
@@ -656,6 +725,117 @@ class ZephyrServer {
       throw new McpError(
         ErrorCode.InternalError,
         `Failed to delete test case: ${errorMessage}`
+      );
+    }
+  }
+
+  private async createTestRun(args: any) {
+    const { 
+      project_key, 
+      name, 
+      test_case_keys,
+      folder,
+      planned_start_date,
+      planned_end_date,
+      description,
+      owner,
+      environment,
+      custom_fields
+    } = args;
+    
+    // Build the basic payload
+    const payload: any = {
+      projectKey: project_key,
+      name: name,
+    };
+    
+    // Add optional fields
+    if (test_case_keys && test_case_keys.length > 0) {
+      payload.items = test_case_keys.map((testCaseKey: string) => ({
+        testCaseKey: testCaseKey
+      }));
+    }
+    if (folder) payload.folder = folder;
+    if (planned_start_date) payload.plannedStartDate = planned_start_date;
+    if (planned_end_date) payload.plannedEndDate = planned_end_date;
+    if (description) payload.description = description;
+    if (owner) payload.owner = owner;
+    if (environment) payload.environment = environment;
+    if (custom_fields) payload.customFields = custom_fields;
+    
+    try {
+      const response = await this.axiosInstance.post('/rest/atm/1.0/testrun', payload);
+      
+      if (response.status === 201) {
+        const testRunKey = response.data.key || 'Unknown';
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `✅ Test run created successfully: ${testRunKey}\n${JSON.stringify({ 
+                key: testRunKey,
+                name: name,
+                testCaseCount: test_case_keys?.length || 0,
+                environment: environment || 'Not specified'
+              }, null, 2)}`,
+            },
+          ],
+        };
+      } else {
+        throw new Error(`Unexpected status code: ${response.status}`);
+      }
+    } catch (error) {
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error && 'response' in error) {
+        const axiosError = error as any;
+        errorMessage = `Status: ${axiosError.response?.status}, Data: ${JSON.stringify(axiosError.response?.data)}`;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = String(error);
+      }
+      throw new McpError(
+        ErrorCode.InternalError,
+        `Failed to create test run: ${errorMessage}`
+      );
+    }
+  }
+
+  private async getTestRun(args: any) {
+    const { test_run_key } = args;
+    
+    try {
+      const response = await this.axiosInstance.get(`/rest/atm/1.0/testrun/${test_run_key}`);
+      
+      if (response.status === 200) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } else {
+        throw new Error(`Failed to retrieve test run: ${response.status}`);
+      }
+    } catch (error) {
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error && 'response' in error) {
+        const axiosError = error as any;
+        if (axiosError.response?.status === 404) {
+          errorMessage = `Test run ${test_run_key} not found`;
+        } else {
+          errorMessage = `Status: ${axiosError.response?.status}, Data: ${JSON.stringify(axiosError.response?.data)}`;
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = String(error);
+      }
+      throw new McpError(
+        ErrorCode.InternalError,
+        `Failed to get test run: ${errorMessage}`
       );
     }
   }
