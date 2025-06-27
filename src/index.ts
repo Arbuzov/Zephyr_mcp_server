@@ -252,6 +252,20 @@ class ZephyrServer {
             required: ['test_run_key'],
           },
         },
+        {
+          name: 'delete_test_case',
+          description: 'Delete a specific test case',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              test_case_key: {
+                type: 'string',
+                description: 'Test case key to delete (e.g., PROJ-T123)',
+              },
+            },
+            required: ['test_case_key'],
+          },
+        },
       ],
     }));
 
@@ -270,6 +284,8 @@ class ZephyrServer {
             return await this.createFolder(request.params.arguments);
           case 'get_test_run_cases':
             return await this.getTestRunCases(request.params.arguments);
+          case 'delete_test_case':
+            return await this.deleteTestCase(request.params.arguments);
           default:
             throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
         }
@@ -601,6 +617,45 @@ class ZephyrServer {
       throw new McpError(
         ErrorCode.InternalError,
         `Failed to get test run cases: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  private async deleteTestCase(args: any) {
+    const { test_case_key } = args;
+    
+    try {
+      const response = await this.axiosInstance.delete(`/rest/atm/1.0/testcase/${test_case_key}`);
+      
+      if (response.status === 204) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `✅ Test case ${test_case_key} deleted successfully`,
+            },
+          ],
+        };
+      } else {
+        throw new Error(`Unexpected status code: ${response.status}`);
+      }
+    } catch (error) {
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error && 'response' in error) {
+        const axiosError = error as any;
+        if (axiosError.response?.status === 404) {
+          errorMessage = `Test case ${test_case_key} not found`;
+        } else {
+          errorMessage = `Status: ${axiosError.response?.status}, Data: ${JSON.stringify(axiosError.response?.data)}`;
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = String(error);
+      }
+      throw new McpError(
+        ErrorCode.InternalError,
+        `Failed to delete test case: ${errorMessage}`
       );
     }
   }
