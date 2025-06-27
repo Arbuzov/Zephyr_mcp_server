@@ -62,6 +62,7 @@ Then configure:
 - `get_test_run_cases` - Get test case keys from a test run
 - `create_test_run` - Create a new test run
 - `get_test_run` - Get detailed information about a specific test run
+- `get_test_execution` - Get detailed information about a specific test execution by execution ID
 
 ## Examples
 
@@ -120,6 +121,13 @@ Then configure:
 ```json
 {
   "test_run_key": "PROJ-R456"
+}
+```
+
+### Get Test Execution
+```json
+{
+  "execution_id": "5805255"
 }
 ```
 

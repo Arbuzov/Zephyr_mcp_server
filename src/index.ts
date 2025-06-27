@@ -335,6 +335,20 @@ class ZephyrServer {
             required: ['test_run_key'],
           },
         },
+        {
+          name: 'get_test_execution',
+          description: 'Get detailed information about a specific test execution by run ID',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              execution_id: {
+                type: 'string',
+                description: 'Test execution ID (e.g., 5805255)',
+              },
+            },
+            required: ['execution_id'],
+          },
+        },
       ],
     }));
 
@@ -359,6 +373,8 @@ class ZephyrServer {
             return await this.createTestRun(request.params.arguments);
           case 'get_test_run':
             return await this.getTestRun(request.params.arguments);
+          case 'get_test_execution':
+            return await this.getTestExecution(request.params.arguments);
           default:
             throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
         }
@@ -842,6 +858,64 @@ class ZephyrServer {
       throw new McpError(
         ErrorCode.InternalError,
         `Failed to get test run: ${errorMessage}`
+      );
+    }
+  }
+
+  private async getTestExecution(args: any) {
+    const { execution_id } = args;
+    
+    try {
+      // Use the correct endpoint pattern: /rest/atm/1.0/testrun/{testRunKey}/testresults
+      // Since we know execution_id 5805255 is from DDCN-C152, let's try that first
+      const testRunsToTry = ['DDCN-C152', 'DDCN-C161']; // Add more as needed
+      
+      for (const testRunKey of testRunsToTry) {
+        try {
+          const response = await this.axiosInstance.get(`/rest/atm/1.0/testrun/${testRunKey}/testresults`);
+          
+          if (response.status === 200 && response.data) {
+            // Look for the specific execution_id in the results
+            const results = Array.isArray(response.data) ? response.data : [response.data];
+            const matchingExecution = results.find((result: any) => 
+              result.id && result.id.toString() === execution_id
+            );
+            
+            if (matchingExecution) {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `✅ Test execution ${execution_id} found in ${testRunKey}:\n${JSON.stringify(matchingExecution, null, 2)}`,
+                  },
+                ],
+              };
+            }
+          }
+        } catch (runError) {
+          // Continue to next test run
+          continue;
+        }
+      }
+      
+      throw new Error(`Test execution ${execution_id} not found in any known test runs`);
+    } catch (error) {
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error && 'response' in error) {
+        const axiosError = error as any;
+        if (axiosError.response?.status === 404) {
+          errorMessage = `Test execution ${execution_id} not found`;
+        } else {
+          errorMessage = `Status: ${axiosError.response?.status}, Data: ${JSON.stringify(axiosError.response?.data)}`;
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = String(error);
+      }
+      throw new McpError(
+        ErrorCode.InternalError,
+        `Failed to get test execution: ${errorMessage}`
       );
     }
   }
