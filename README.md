@@ -4,30 +4,39 @@ Model Context Protocol server for Zephyr Scale test management. Create, read, an
 
 ## Quick Start
 
-### Option 1: Install from npm
+### Option 1: Using npx (Recommended - No installation required)
+Just configure your MCP client with the npx command below.
+
+### Option 2: Install from npm
 ```bash
 npm install -g zephyr-scale-mcp-server
 ```
 
-### Option 2: Build locally
-```bash
-# Clone and build
-git clone <repository-url>
-cd zephyr-scale-mcp-server
-npm install
-npm run build
-
-# Configure environment
-export ZEPHYR_API_KEY="your-api-token"
-export ZEPHYR_BASE_URL="https://your-company.atlassian.net"
-
-# Test the server
-node build/index.js
-```
-
 ## MCP Configuration
 
-### For npm installation:
+### Option 1: Using npx (Recommended - No installation required)
+```json
+{
+  "mcpServers": {
+    "zephyr-server": {
+      "command": "npx",
+      "args": ["zephyr-scale-mcp-server@latest"],
+      "env": {
+        "ZEPHYR_API_KEY": "your-api-token",
+        "ZEPHYR_BASE_URL": "https://your-company.atlassian.net"
+      }
+    }
+  }
+}
+```
+
+### Option 2: Using global npm installation
+First install the package globally:
+```bash
+npm install -g zephyr-scale-mcp-server
+```
+
+Then configure:
 ```json
 {
   "mcpServers": {
@@ -42,31 +51,15 @@ node build/index.js
 }
 ```
 
-### For local build:
-```json
-{
-  "mcpServers": {
-    "zephyr-server": {
-      "command": "node",
-      "args": ["/path/to/zephyr-scale-mcp-server/build/index.js"],
-      "env": {
-        "ZEPHYR_API_KEY": "your-api-token",
-        "ZEPHYR_BASE_URL": "https://your-company.atlassian.net"
-      }
-    }
-  }
-}
-```
-
 ## Available Tools
 
-- `create_test_case` - Create STEP_BY_STEP or PLAIN_TEXT test cases
-- `create_test_case_with_bdd` - Create BDD/Gherkin test cases
-- `get_test_case` - Get test case details
-- `update_test_case_bdd` - Update BDD test cases
+- `get_test_case` - Get detailed information about a specific test case
+- `create_test_case` - Create a new test case with STEP_BY_STEP or PLAIN_TEXT content
+- `create_test_case_with_bdd` - Create a new test case with BDD content
+- `update_test_case_bdd` - Update an existing test case with BDD content
 - `delete_test_case` - Delete a specific test case
-- `create_folder` - Create test case folders
-- `get_test_run_cases` - Get test cases from test runs
+- `create_folder` - Create a new folder in Zephyr Scale
+- `get_test_run_cases` - Get test case keys from a test run
 
 ## Examples
 
@@ -110,36 +103,7 @@ node build/index.js
 }
 ```
 
-## Verification
 
-After installation, verify the package works:
-
-```bash
-# Check installation
-which zephyr-scale-mcp
-# Should show: /opt/homebrew/bin/zephyr-scale-mcp (or similar path)
-
-# Test with environment variables
-export ZEPHYR_API_KEY="your-api-token"
-export ZEPHYR_BASE_URL="https://your-company.atlassian.net"
-zephyr-scale-mcp
-# Should start the MCP server (Ctrl+C to exit)
-```
-
-### MCP Integration Test
-
-Once configured in your MCP client, test with:
-
-```json
-{
-  "tool": "get_test_case",
-  "arguments": {
-    "test_case_key": "PROJ-T123"
-  }
-}
-```
-
-Expected response includes test case details, BDD scripts, and metadata.
 
 ## Authentication
 
