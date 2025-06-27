@@ -285,6 +285,10 @@ class ZephyrServer {
                 description: 'Array of test case keys to include in the test run',
                 items: { type: 'string' }
               },
+              test_plan_key: {
+                type: 'string',
+                description: 'Test plan key to link this test run to (optional)',
+              },
               folder: {
                 type: 'string',
                 description: 'Folder path (optional)',
@@ -734,6 +738,7 @@ class ZephyrServer {
       project_key, 
       name, 
       test_case_keys,
+      test_plan_key,
       folder,
       planned_start_date,
       planned_end_date,
@@ -762,6 +767,7 @@ class ZephyrServer {
     if (owner) payload.owner = owner;
     if (environment) payload.environment = environment;
     if (custom_fields) payload.customFields = custom_fields;
+    if (test_plan_key) payload.testPlanKey = test_plan_key;
     
     try {
       const response = await this.axiosInstance.post('/rest/atm/1.0/testrun', payload);
