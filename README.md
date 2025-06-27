@@ -64,6 +64,7 @@ node build/index.js
 - `create_test_case_with_bdd` - Create BDD/Gherkin test cases
 - `get_test_case` - Get test case details
 - `update_test_case_bdd` - Update BDD test cases
+- `delete_test_case` - Delete a specific test case
 - `create_folder` - Create test case folders
 - `get_test_run_cases` - Get test cases from test runs
 
@@ -99,6 +100,13 @@ node build/index.js
   "project_key": "PROJ",
   "name": "User Authentication",
   "bdd_content": "**Given** a user with valid credentials\n**When** the user attempts to log in\n**Then** the user should be authenticated successfully"
+}
+```
+
+### Delete Test Case
+```json
+{
+  "test_case_key": "PROJ-T123"
 }
 ```
 
