@@ -53,16 +53,23 @@ Then configure:
 
 ## Available Tools
 
+### Test Case Management
 - `get_test_case` - Get detailed information about a specific test case
 - `create_test_case` - Create a new test case with STEP_BY_STEP or PLAIN_TEXT content
 - `create_test_case_with_bdd` - Create a new test case with BDD content
 - `update_test_case_bdd` - Update an existing test case with BDD content
 - `delete_test_case` - Delete a specific test case
-- `create_folder` - Create a new folder in Zephyr Scale
-- `get_test_run_cases` - Get test case keys from a test run
+
+### Test Run Management
 - `create_test_run` - Create a new test run
 - `get_test_run` - Get detailed information about a specific test run
-- `get_test_execution` - Get detailed information about a specific test execution by execution ID
+- `get_test_run_cases` - Get test case keys from a test run
+
+### Test Execution
+- `get_test_execution` - Get detailed individual test execution results including step-by-step results, timestamps, comments, and attachments
+
+### Organization
+- `create_folder` - Create a new folder in Zephyr Scale
 
 ## Examples
 
