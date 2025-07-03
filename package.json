@@ -19,7 +19,9 @@
     "watch": "tsc --watch",
     "start": "node build/index.js",
     "inspector": "npx @modelcontextprotocol/inspector build/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node test/run-tests.cjs",
+    "test:unit": "node test/zephyr-server.test.cjs",
+    "test:integration": "node test/integration.test.cjs",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
