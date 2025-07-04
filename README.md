@@ -64,7 +64,7 @@ zephyr://testcase/YOUR-TEST-CASE-KEY
 
 **Examples:**
 - `zephyr://testcase/PROJ-T123` - Get test case PROJ-T123
-- `zephyr://testcase/DDCN-T3355` - Get test case DDCN-T3355
+- `zephyr://testcase/PROJ-T456` - Get test case PROJ-T456
 
 **Response format:**
 ```json
@@ -164,9 +164,9 @@ Request: file:///Users/username/templates/login-test.json
 ### Method 1: Direct Chat Requests (Cline/Claude Dev)
 Simply ask the AI assistant to access any resource:
 ```
-"Please access the resource zephyr://testcase/PROJ-T3358"
+"Please access the resource zephyr://testcase/PROJ-T123"
 "Show me the BDD content from zephyr://testcase/PROJ-T123"
-"Compare zephyr://testcase/PROJ-T3358 with zephyr://testcase/PROJ-T9"
+"Compare zephyr://testcase/PROJ-T123 with zephyr://testcase/PROJ-T456"
 ```
 
 ### Method 2: MCP Resource Panel (GUI)
@@ -196,18 +196,18 @@ Access local files for templates or examples:
 
 **Comparing Test Cases:**
 ```
-Input: "Compare zephyr://testcase/CNIDS-T3358 and zephyr://testcase/PROJ-T9"
+Input: "Compare zephyr://testcase/PROJ-T123 and zephyr://testcase/ANOTHER-PROJ-T456"
 
 Output: Detailed comparison showing:
-- PROJ-T3358: Simple BDD navigation test (DDCN project, Low priority)
-- PROJ-T9: Complex payment workflow (AXID project, High priority, 11 steps)
+- PROJ-T123: Simple BDD navigation test (PROJ project, Low priority)
+- ANOTHER-PROJ-T456: Complex payment workflow (ANOTHER-PROJ project, High priority, 11 steps)
 - Different test script types (BDD vs STEP_BY_STEP)
 - Priority and complexity differences
 ```
 
 **Using as Template:**
 ```
-Input: "Create a new test case similar to zephyr://testcase/PROJ-T3358 but for logout functionality"
+Input: "Create a new test case similar to zephyr://testcase/PROJ-T123 but for logout functionality"
 
 Output: New BDD test case with Given/When/Then structure adapted for logout flow
 ```
@@ -275,7 +275,7 @@ Output: New BDD test case with Given/When/Then structure adapted for logout flow
 ### Get Test Execution
 ```json
 {
-  "execution_id": "5805255"
+  "execution_id": "1234567"
 }
 ```
 
