@@ -11,8 +11,9 @@ const ZephyrServerTest = require('./zephyr-server.test.cjs');
 class ZephyrIntegrationTest extends ZephyrServerTest {
   constructor() {
     super();
-    this.testCaseKey = 'TX-T3332'; // Known test case from your system
-    this.projectKey = 'TX';
+    // Use generic test values for demonstration
+    this.testCaseKey = 'PROJ-T123';
+    this.projectKey = 'PROJ';
   }
 
   /**
@@ -55,8 +56,10 @@ class ZephyrIntegrationTest extends ZephyrServerTest {
    * Test folder search functionality
    */
   async testFolderSearch() {
-    const folderPath = '/2025 Releases/CRM on Wechat';
-    console.log(`Testing folder search for: ${folderPath}`);
+    // Use a generic test folder path for validation
+    const folderPath = '/TestFolder';
+    
+    console.log(`Testing folder search functionality with example path: ${folderPath}`);
     
     // Validate folder path format
     if (!folderPath.startsWith('/')) {
@@ -73,8 +76,8 @@ class ZephyrIntegrationTest extends ZephyrServerTest {
     console.log('Testing BDD content handling...');
     
     const sampleBDD = `
-    Given I am logged into the WeChat Mini Program
-    When I navigate to the My page
+    Given I am logged into the application
+    When I navigate to the main page
     Then I should see the updated UI layout
     And all visual elements should be properly aligned
     `;

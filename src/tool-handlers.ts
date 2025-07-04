@@ -55,7 +55,6 @@ export class ZephyrToolHandlers {
       customFields: {
         'Type': 'Functional',
         'Priority': customPriorityMapping[priority] || 'P0',
-        'Execution Type': 'Manual - To Be Automated'
       }
     };
     
@@ -143,7 +142,6 @@ export class ZephyrToolHandlers {
       customFields: {
         'Type': 'Functional',
         'Priority': customPriorityMapping[priority] || 'P0',
-        'Execution Type': 'Manual - To Be Automated'
       }
     };
     
@@ -443,12 +441,20 @@ export class ZephyrToolHandlers {
   }
 
   async getTestExecution(args: any) {
-    const { execution_id } = args;
+    const { execution_id, test_run_keys } = args;
+    
+    // Require users to specify test runs to search - fail immediately if not provided
+    if (!test_run_keys || !Array.isArray(test_run_keys) || test_run_keys.length === 0) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        'test_run_keys is required. Please provide an array of test run keys to search in (e.g., ["PROJ-C152", "PROJ-C161"]). Use get_test_run_cases to find test runs if needed.'
+      );
+    }
     
     try {
-      // Use the correct endpoint pattern: /rest/atm/1.0/testrun/{testRunKey}/testresults
-      // Since we know execution_id 5805255 is from DDCN-C152, let's try that first
-      const testRunsToTry = ['DDCN-C152', 'DDCN-C161']; // Add more as needed
+      const testRunsToTry = test_run_keys;
+      
+      const searchResults: any[] = [];
       
       for (const testRunKey of testRunsToTry) {
         try {
@@ -471,24 +477,29 @@ export class ZephyrToolHandlers {
                 ],
               };
             }
+            
+            // Store search info for debugging
+            searchResults.push({
+              testRunKey,
+              executionCount: results.length,
+              executionIds: results.map((r: any) => r.id).slice(0, 5) // Show first 5 IDs
+            });
           }
         } catch (runError) {
-          // Continue to next test run
+          // Store error info for debugging
+          searchResults.push({
+            testRunKey,
+            error: runError instanceof Error ? runError.message : String(runError)
+          });
           continue;
         }
       }
       
-      throw new Error(`Test execution ${execution_id} not found in any known test runs`);
+      // If not found, provide helpful debugging info
+      throw new Error(`Test execution ${execution_id} not found in any of the ${testRunsToTry.length} test runs searched. Search results: ${JSON.stringify(searchResults, null, 2)}`);
     } catch (error) {
       let errorMessage = 'Unknown error';
-      if (error instanceof Error && 'response' in error) {
-        const axiosError = error as any;
-        if (axiosError.response?.status === 404) {
-          errorMessage = `Test execution ${execution_id} not found`;
-        } else {
-          errorMessage = `Status: ${axiosError.response?.status}, Data: ${JSON.stringify(axiosError.response?.data)}`;
-        }
-      } else if (error instanceof Error) {
+      if (error instanceof Error) {
         errorMessage = error.message;
       } else {
         errorMessage = String(error);

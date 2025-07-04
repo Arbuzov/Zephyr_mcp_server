@@ -288,8 +288,14 @@ export const toolSchemas = [
           type: 'string',
           description: 'Test execution ID (e.g., 5805255)',
         },
+        test_run_keys: {
+          type: 'array',
+          description: 'Array of test run keys to search in (required, e.g., ["PROJ-C152", "PROJ-C161"])',
+          items: { type: 'string' },
+          minItems: 1
+        },
       },
-      required: ['execution_id'],
+      required: ['execution_id', 'test_run_keys'],
     },
   },
   {
@@ -300,11 +306,11 @@ export const toolSchemas = [
       properties: {
         project_key: {
           type: 'string',
-          description: 'Project key (e.g., DDCN)',
+          description: 'Project key (e.g., PROJ)',
         },
         folder_path: {
           type: 'string',
-          description: 'Folder path to search in (e.g., /2025 Releases/CRM on Wechat)',
+          description: 'Folder path to search in (e.g., /ProjectName/SubFolder)',
         },
         max_results: {
           type: 'number',
@@ -323,7 +329,7 @@ export const toolSchemas = [
       properties: {
         test_run_key: {
           type: 'string',
-          description: 'Test run key (e.g., DDCN-C161)',
+          description: 'Test run key (e.g., PROJ-C161)',
         },
         test_case_keys: {
           type: 'array',
