@@ -4,12 +4,15 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   CallToolRequestSchema,
   ErrorCode,
+  ListResourcesRequestSchema,
   ListToolsRequestSchema,
   McpError,
+  ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import axios from 'axios';
 import { toolSchemas } from './tool-schemas.js';
 import { ZephyrToolHandlers } from './tool-handlers.js';
+import { resourceList, readResource, setAxiosInstance } from './resources.js';
 
 const BASE_URL = process.env.ZEPHYR_BASE_URL;
 const ACCESS_TOKEN = process.env.ZEPHYR_API_KEY;
@@ -38,6 +41,7 @@ class ZephyrServer {
       {
         capabilities: {
           tools: {},
+          resources: {},
         },
       }
     );
@@ -47,8 +51,12 @@ class ZephyrServer {
       headers,
     });
 
+    // Share axios instance with resources module for live data fetching
+    setAxiosInstance(this.axiosInstance);
+
     this.toolHandlers = new ZephyrToolHandlers(this.axiosInstance);
     this.setupToolHandlers();
+    this.setupResourceHandlers();
     
     this.server.onerror = (error) => console.error('[MCP Error]', error);
     process.on('SIGINT', async () => {
@@ -103,6 +111,16 @@ class ZephyrServer {
           isError: true,
         };
       }
+    });
+  }
+
+  private setupResourceHandlers() {
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+      resources: resourceList,
+    }));
+
+    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+      return await readResource(request.params.uri);
     });
   }
 
