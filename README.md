@@ -1,8 +1,26 @@
 # Zephyr Scale MCP Server
 
-Model Context Protocol server for Zephyr Scale test management. Create, read, and manage test cases through the Atlassian REST API. Access live test case data, example payloads, and file resources through a unified resource system.
+Model Context Protocol server for Zephyr Scale test management. Create, read, and manage test cases through the Atlassian REST API with **official API-compliant schemas**. Access live test case data, example payloads, and file resources through a unified resource system.
+
+## Features
+
+✅ **Official API Structure** - Schemas match Zephyr Scale REST API v1  
+✅ **Unified Test Creation** - Single `create_test_case` tool supports all script types  
+✅ **Live Template System** - Fetch real test cases as templates via `zephyr://testcase/` resources  
+✅ **Project-Specific Fields** - Automatically match your project's `customFields` structure  
+✅ **Full Test Management** - Create, read, delete test cases and manage test runs  
+✅ **Resource Access** - Access local files, live data, and built-in examples
 
 ## Quick Start
+
+### New Unified API Structure
+The latest version features a **unified `create_test_case` tool** that supports all test script types (STEP_BY_STEP, PLAIN_TEXT, and BDD) through a single, consistent interface. This matches the official Zephyr Scale REST API v1 structure exactly.
+
+**Key Changes:**
+- ✅ Single `create_test_case` tool replaces separate BDD tool
+- ✅ All script types use the `test_script` object structure
+- ✅ Consistent with official Zephyr Scale API documentation
+- ✅ Simplified workflow - one tool for all test case types
 
 ### Option 1: Using npx (Recommended - No installation required)
 Just configure your MCP client with the npx command below.
@@ -56,7 +74,7 @@ Then configure:
 The MCP server provides access to various resources through URI schemes:
 
 ### Live Test Case Data
-Fetch real test case data directly from your Zephyr Scale instance:
+Fetch real test case data directly from your Zephyr Scale instance to use as templates:
 
 ```
 zephyr://testcase/YOUR-TEST-CASE-KEY
@@ -64,14 +82,19 @@ zephyr://testcase/YOUR-TEST-CASE-KEY
 
 **Examples:**
 - `zephyr://testcase/PROJ-T123` - Get test case PROJ-T123
-- `zephyr://testcase/PROJ-T456` - Get test case PROJ-T456
+- `zephyr://testcase/CNIDS-T3388` - Get test case CNIDS-T3388
+
+**Use Case: Template for New Test Cases**
+1. Fetch an existing test case: `zephyr://testcase/PROJ-T123`
+2. Copy its structure (especially `customFields` and `folder`)
+3. Create new test cases with the same project-specific configuration
 
 **Response format:**
 ```json
 {
   "description": "Live test case data for PROJ-T123 retrieved from Zephyr Scale",
   "testCaseKey": "PROJ-T123", 
-  "retrievedAt": "2025-07-04T12:00:00.000Z",
+  "retrievedAt": "2025-07-09T12:00:00.000Z",
   "data": {
     "key": "PROJ-T123",
     "name": "User Authentication Test",
@@ -79,11 +102,18 @@ zephyr://testcase/YOUR-TEST-CASE-KEY
     "priority": "High",
     "projectKey": "PROJ",
     "folder": "/ProjectName/Authentication",
+    "customFields": {
+      "Type": "Functional",
+      "Priority": "P2",
+      "Regression": false,
+      "Execution Type": "Manual - To Be Automated",
+      "Risk Control": false
+    },
     "testScript": {
-      "type": "BDD",
-      "text": "Given user navigates to login page..."
+      "type": "BDD", 
+      "text": "    Given user navigates to login page\n    When user enters valid credentials\n    Then user should be logged in successfully"
     }
-    // ... complete test case data
+    // ... complete test case data matching your project structure
   }
 }
 ```
@@ -112,18 +142,18 @@ Resources provide clear error messages:
 
 ### Test Case Management
 - `get_test_case` - Get detailed information about a specific test case
-- `create_test_case` - Create a new test case with STEP_BY_STEP or PLAIN_TEXT content
-- `create_test_case_with_bdd` - Create a new test case with BDD content
-- `update_test_case_bdd` - Update an existing test case with BDD content
+- `create_test_case` - Create test cases with STEP_BY_STEP, PLAIN_TEXT, or BDD content (unified API)
 - `delete_test_case` - Delete a specific test case
 
 ### Test Run Management
 - `create_test_run` - Create a new test run
 - `get_test_run` - Get detailed information about a specific test run
 - `get_test_run_cases` - Get test case keys from a test run
+- `add_test_cases_to_run` - Add test cases to an existing test run
 
-### Test Execution
+### Test Execution & Search
 - `get_test_execution` - Get detailed individual test execution results including step-by-step results, timestamps, comments, and attachments
+- `search_test_cases_by_folder` - Search for test cases in a specific folder
 
 ### Organization
 - `create_folder` - Create a new folder in Zephyr Scale
@@ -214,7 +244,10 @@ Output: New BDD test case with Given/When/Then structure adapted for logout flow
 
 ## Examples
 
-### Simple Test Case
+### Migration from Previous Versions
+If you were using the previous `create_test_case_with_bdd` tool, simply use `create_test_case` with the `test_script.type: "BDD"` structure shown in the examples below.
+
+### Simple Test Case (Minimal)
 ```json
 {
   "project_key": "PROJ",
@@ -222,28 +255,83 @@ Output: New BDD test case with Given/When/Then structure adapted for logout flow
 }
 ```
 
-### Step-by-Step Test Case
+### Step-by-Step Test Case (New API Structure)
 ```json
 {
   "project_key": "PROJ",
   "name": "User Login Flow",
-  "test_script_type": "STEP_BY_STEP",
-  "steps": [
-    {
-      "description": "Navigate to login page",
-      "testData": "URL: https://app.example.com/login",
-      "expectedResult": "Login form is displayed"
-    }
-  ]
+  "test_script": {
+    "type": "STEP_BY_STEP",
+    "steps": [
+      {
+        "description": "Navigate to login page",
+        "testData": "URL: https://app.example.com/login",
+        "expectedResult": "Login form is displayed"
+      },
+      {
+        "description": "Enter valid credentials",
+        "testData": "Username: testuser, Password: testpass",
+        "expectedResult": "User is logged in successfully"
+      }
+    ]
+  },
+  "folder": "/ProjectName/Authentication",
+  "status": "Draft",
+  "priority": "High"
 }
 ```
 
-### BDD Test Case
+### Plain Text Test Case (New API Structure)
+```json
+{
+  "project_key": "PROJ",
+  "name": "Simple API Test",
+  "test_script": {
+    "type": "PLAIN_TEXT",
+    "text": "1. Call GET /api/users endpoint\n2. Verify response returns 200 status\n3. Check that user list is not empty"
+  }
+}
+```
+
+### BDD Test Case (New API Structure)
 ```json
 {
   "project_key": "PROJ",
   "name": "User Authentication",
-  "bdd_content": "**Given** a user with valid credentials\n**When** the user attempts to log in\n**Then** the user should be authenticated successfully"
+  "test_script": {
+    "type": "BDD",
+    "text": "Feature: User Login\n\nScenario: Valid user login\n  Given a user with valid credentials\n  When the user attempts to log in\n  Then the user should be authenticated successfully"
+  },
+  "custom_fields": {
+    "Type": "Functional",
+    "Priority": "P2",
+    "Regression": false,
+    "Execution Type": "Manual - To Be Automated",
+    "Risk Control": false
+  }
+}
+```
+
+### Using Real Test Case as Template
+```json
+// First, fetch an existing test case structure:
+// Request: zephyr://testcase/PROJ-T123
+// Then use its structure for new test cases:
+{
+  "project_key": "PROJ", 
+  "name": "New Feature Test",
+  "test_script": {
+    "type": "BDD",
+    "text": "Feature: New Feature\nScenario: Feature works correctly\n  Given the new feature is enabled\n  When user interacts with it\n  Then it should work as expected"
+  },
+  "folder": "/2025 Releases/New Features",
+  "custom_fields": {
+    "Type": "Functional",
+    "Priority": "P2",
+    "Regression": false,
+    "Execution Type": "Manual - To Be Automated", 
+    "Risk Control": false
+  }
 }
 ```
 
