@@ -19,7 +19,7 @@ export const resourceList = [
   {
     uri: 'zephyr://testcase/',
     name: 'Live Test Case Data',
-    description: 'Fetch real test case data from Zephyr Scale. Use zephyr://testcase/TEST-KEY (e.g., zephyr://testcase/PROJ-T123)',
+    description: 'Fetch real test case data from Zephyr Scale to use as templates. Use zephyr://testcase/TEST-KEY (e.g., zephyr://testcase/PROJ-T123). The fetched data shows the exact structure including customFields, folder paths, and other project-specific configurations that you can copy when creating new test cases.',
     mimeType: 'application/json',
   },
   {

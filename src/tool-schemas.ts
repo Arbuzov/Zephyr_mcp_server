@@ -15,7 +15,7 @@ export const toolSchemas = [
   },
   {
     name: 'create_test_case',
-    description: 'Create a new test case with STEP_BY_STEP or PLAIN_TEXT content',
+    description: 'Create a new test case with STEP_BY_STEP, PLAIN_TEXT, or BDD content. To match your project\'s structure, use the zephyr://testcase/EXISTING-KEY resource to fetch a real test case and use its structure as a template, especially for custom_fields.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -27,44 +27,60 @@ export const toolSchemas = [
           type: 'string',
           description: 'Test case name (required)',
         },
-        test_script_type: {
-          type: 'string',
-          description: 'Type of test script',
-          enum: ['STEP_BY_STEP', 'PLAIN_TEXT'],
-          default: 'STEP_BY_STEP',
-        },
-        steps: {
-          type: 'array',
-          description: 'Test steps for STEP_BY_STEP (array of objects with description, testData, expectedResult)',
-          items: {
-            type: 'object',
-            properties: {
-              description: { type: 'string' },
-              testData: { type: 'string' },
-              expectedResult: { type: 'string' },
-              testCaseKey: { type: 'string' }
+        test_script: {
+          type: 'object',
+          description: 'Test script object containing type and content',
+          properties: {
+            type: {
+              type: 'string',
+              description: 'Type of test script',
+              enum: ['STEP_BY_STEP', 'PLAIN_TEXT', 'BDD'],
+            },
+            steps: {
+              type: 'array',
+              description: 'Test steps for STEP_BY_STEP type',
+              items: {
+                type: 'object',
+                properties: {
+                  description: { 
+                    type: 'string',
+                    description: 'Step description'
+                  },
+                  testData: { 
+                    type: 'string',
+                    description: 'Test data for the step (optional)'
+                  },
+                  expectedResult: { 
+                    type: 'string',
+                    description: 'Expected result for the step (optional)'
+                  },
+                  testCaseKey: { 
+                    type: 'string',
+                    description: 'Test case key reference for calling other tests (optional)'
+                  }
+                }
+              }
+            },
+            text: {
+              type: 'string',
+              description: 'Text content for PLAIN_TEXT or BDD types. For BDD, use Gherkin syntax with Given/When/Then steps.',
             }
-          }
-        },
-        plain_text: {
-          type: 'string',
-          description: 'Plain text content for PLAIN_TEXT type',
+          },
+          required: ['type']
         },
         folder: {
           type: 'string',
-          description: 'Folder path (optional)',
+          description: 'Folder path (optional, e.g., "/Orbiter/Cargo Bay")',
         },
         status: {
           type: 'string',
           description: 'Test case status (optional)',
           enum: ['Draft', 'Approved', 'Deprecated'],
-          default: 'Draft',
         },
         priority: {
           type: 'string',
           description: 'Test case priority (optional)',
           enum: ['High', 'Medium', 'Low'],
-          default: 'High',
         },
         precondition: {
           type: 'string',
@@ -93,46 +109,46 @@ export const toolSchemas = [
         },
         issue_links: {
           type: 'array',
-          description: 'Array of issue links (optional)',
+          description: 'Array of issue links (optional) - will be mapped to issueLinks in API',
           items: { type: 'string' }
         },
         custom_fields: {
           type: 'object',
-          description: 'Custom fields object (optional)',
+          description: 'Custom fields object (optional). Use the zephyr://testcase/EXISTING-KEY resource to fetch a real test case and copy its customFields structure. Common examples: {"Type": "Functional", "Priority": "P2", "Regression": false, "Execution Type": "Manual - To Be Automated", "Risk Control": false}',
+          additionalProperties: true
         },
+        parameters: {
+          type: 'object',
+          description: 'Test parameters for data-driven testing (optional)',
+          properties: {
+            variables: {
+              type: 'array',
+              description: 'Array of parameter variables',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  type: { 
+                    type: 'string',
+                    enum: ['FREE_TEXT', 'DATA_SET']
+                  },
+                  dataSet: { type: 'string' }
+                },
+                required: ['name', 'type']
+              }
+            },
+            entries: {
+              type: 'array',
+              description: 'Array of parameter value entries',
+              items: {
+                type: 'object',
+                additionalProperties: true
+              }
+            }
+          }
+        }
       },
       required: ['project_key', 'name'],
-    },
-  },
-  {
-    name: 'create_test_case_with_bdd',
-    description: 'Create a new test case with BDD content',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        project_key: {
-          type: 'string',
-          description: 'Project key (required)',
-        },
-        name: {
-          type: 'string',
-          description: 'Test case name (required)',
-        },
-        bdd_content: {
-          type: 'string',
-          description: 'BDD content in markdown format',
-        },
-        folder: {
-          type: 'string',
-          description: 'Folder name (optional)',
-        },
-        priority: {
-          type: 'string',
-          description: 'Test case priority (High, Medium, Low)',
-          enum: ['High', 'Medium', 'Low'],
-        },
-      },
-      required: ['project_key', 'name', 'bdd_content'],
     },
   },
   {

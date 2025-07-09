@@ -1,16 +1,31 @@
 export interface TestStep {
-  description: string;
+  description?: string;
   testData?: string;
-  expectedResult: string;
+  expectedResult?: string;
   testCaseKey?: string;
+}
+
+export interface TestScript {
+  type: 'STEP_BY_STEP' | 'PLAIN_TEXT' | 'BDD';
+  steps?: TestStep[];
+  text?: string;
+}
+
+export interface TestParameter {
+  name: string;
+  type: 'FREE_TEXT' | 'DATA_SET';
+  dataSet?: string;
+}
+
+export interface TestParameters {
+  variables: TestParameter[];
+  entries: Record<string, any>[];
 }
 
 export interface TestCaseArgs {
   project_key: string;
   name: string;
-  test_script_type?: 'STEP_BY_STEP' | 'PLAIN_TEXT';
-  steps?: TestStep[];
-  plain_text?: string;
+  test_script?: TestScript;
   folder?: string;
   status?: 'Draft' | 'Approved' | 'Deprecated';
   priority?: 'High' | 'Medium' | 'Low';
@@ -22,15 +37,9 @@ export interface TestCaseArgs {
   labels?: string[];
   issue_links?: string[];
   custom_fields?: Record<string, any>;
+  parameters?: TestParameters;
 }
 
-export interface BddTestCaseArgs {
-  project_key: string;
-  name: string;
-  bdd_content: string;
-  folder?: string;
-  priority?: 'High' | 'Medium' | 'Low';
-}
 
 export interface UpdateBddArgs {
   test_case_key: string;

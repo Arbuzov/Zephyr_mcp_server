@@ -2,7 +2,6 @@ import { AxiosInstance } from 'axios';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { 
   TestCaseArgs, 
-  BddTestCaseArgs, 
   UpdateBddArgs, 
   FolderArgs, 
   TestRunArgs, 
@@ -30,12 +29,10 @@ export class ZephyrToolHandlers {
     const { 
       project_key, 
       name, 
-      test_script_type = 'STEP_BY_STEP', 
-      steps, 
-      plain_text,
+      test_script,
       folder,
-      status = 'Draft',
-      priority = 'High',
+      status,
+      priority,
       precondition,
       objective,
       component,
@@ -43,23 +40,20 @@ export class ZephyrToolHandlers {
       estimated_time,
       labels,
       issue_links,
-      custom_fields
+      custom_fields,
+      parameters
     } = args;
     
     // Build the basic payload
     const payload: any = {
       projectKey: project_key,
-      name: name,
-      status: status,
-      priority: priority,
-      customFields: {
-        'Type': 'Functional',
-        'Priority': customPriorityMapping[priority] || 'P0',
-      }
+      name: name
     };
     
     // Add optional fields
     if (folder) payload.folder = folder;
+    if (status) payload.status = status;
+    if (priority) payload.priority = priority;
     if (precondition) payload.precondition = precondition;
     if (objective) payload.objective = objective;
     if (component) payload.component = component;
@@ -67,30 +61,32 @@ export class ZephyrToolHandlers {
     if (estimated_time) payload.estimatedTime = estimated_time;
     if (labels && labels.length > 0) payload.labels = labels;
     if (issue_links && issue_links.length > 0) payload.issueLinks = issue_links;
+    if (custom_fields) payload.customFields = custom_fields;
+    if (parameters) payload.parameters = parameters;
     
-    // Merge custom fields if provided
-    if (custom_fields) {
-      payload.customFields = { ...payload.customFields, ...custom_fields };
-    }
-    
-    // Handle test script based on type
-    if (test_script_type === 'STEP_BY_STEP' && steps && steps.length > 0) {
+    // Handle test script
+    if (test_script) {
       payload.testScript = {
-        type: 'STEP_BY_STEP',
-        steps: steps.map((step: any) => {
+        type: test_script.type
+      };
+      
+      if (test_script.type === 'STEP_BY_STEP' && test_script.steps) {
+        payload.testScript.steps = test_script.steps.map((step: any) => {
           const stepObj: any = {};
           if (step.description) stepObj.description = step.description;
           if (step.testData) stepObj.testData = step.testData;
           if (step.expectedResult) stepObj.expectedResult = step.expectedResult;
           if (step.testCaseKey) stepObj.testCaseKey = step.testCaseKey;
           return stepObj;
-        })
-      };
-    } else if (test_script_type === 'PLAIN_TEXT' && plain_text) {
-      payload.testScript = {
-        type: 'PLAIN_TEXT',
-        text: plain_text
-      };
+        });
+      } else if ((test_script.type === 'PLAIN_TEXT' || test_script.type === 'BDD') && test_script.text) {
+        if (test_script.type === 'BDD') {
+          const gherkinContent = convertToGherkin(test_script.text);
+          payload.testScript.text = gherkinContent || test_script.text;
+        } else {
+          payload.testScript.text = test_script.text;
+        }
+      }
     }
     
     try {
@@ -104,9 +100,9 @@ export class ZephyrToolHandlers {
               type: 'text',
               text: `✅ Test case created successfully: ${testKey}\n${JSON.stringify({ 
                 key: testKey, 
-                type: test_script_type,
-                steps: test_script_type === 'STEP_BY_STEP' ? steps?.length || 0 : undefined,
-                plainText: test_script_type === 'PLAIN_TEXT' ? !!plain_text : undefined
+                type: test_script?.type || 'none',
+                hasSteps: test_script?.type === 'STEP_BY_STEP' ? test_script.steps?.length || 0 : undefined,
+                hasText: (test_script?.type === 'PLAIN_TEXT' || test_script?.type === 'BDD') ? !!test_script.text : undefined
               }, null, 2)}`,
             },
           ],
@@ -127,56 +123,6 @@ export class ZephyrToolHandlers {
       throw new McpError(
         ErrorCode.InternalError,
         `Failed to create test case: ${errorMessage}`
-      );
-    }
-  }
-
-  async createTestCaseWithBdd(args: BddTestCaseArgs) {
-    const { project_key, name, bdd_content, folder, priority = 'High' } = args;
-    
-    const payload: any = {
-      projectKey: project_key,
-      name: name,
-      status: 'Draft',
-      priority: priorityMapping[priority] || 'High',
-      customFields: {
-        'Type': 'Functional',
-        'Priority': customPriorityMapping[priority] || 'P0',
-      }
-    };
-    
-    if (folder) {
-      payload.folder = folder;
-    }
-    
-    const gherkinContent = convertToGherkin(bdd_content);
-    if (gherkinContent) {
-      payload.testScript = {
-        type: 'BDD',
-        text: gherkinContent
-      };
-    }
-    
-    try {
-      const response = await this.axiosInstance.post('/rest/atm/1.0/testcase', payload);
-      
-      if (response.status === 201) {
-        const testKey = response.data.key || 'Unknown';
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `✅ Test case with BDD created successfully: ${testKey}\n${JSON.stringify({ key: testKey }, null, 2)}`,
-            },
-          ],
-        };
-      } else {
-        throw new Error(`Unexpected status code: ${response.status}`);
-      }
-    } catch (error) {
-      throw new McpError(
-        ErrorCode.InternalError,
-        `Failed to create test case with BDD: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }

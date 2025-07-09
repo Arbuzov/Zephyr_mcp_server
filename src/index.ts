@@ -79,8 +79,6 @@ class ZephyrServer {
             return await this.toolHandlers.getTestCase(args);
           case 'create_test_case':
             return await this.toolHandlers.createTestCase(args as any);
-          case 'create_test_case_with_bdd':
-            return await this.toolHandlers.createTestCaseWithBdd(args as any);
           case 'update_test_case_bdd':
             return await this.toolHandlers.updateTestCaseBdd(args as any);
           case 'create_folder':
