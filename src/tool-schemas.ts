@@ -76,11 +76,12 @@ export const toolSchemas = [
           type: 'string',
           description: 'Test case status (optional)',
           enum: ['Draft', 'Approved', 'Deprecated'],
+          default: 'Draft',
         },
         priority: {
           type: 'string',
           description: 'Test case priority (optional)',
-          enum: ['High', 'Medium', 'Low'],
+          enum: ['High', 'Normal', 'Low'],
         },
         precondition: {
           type: 'string',

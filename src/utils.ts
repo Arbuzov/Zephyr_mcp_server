@@ -25,7 +25,7 @@ export function convertToGherkin(bddContent: string): string {
 
 export const customPriorityMapping: { [key: string]: string } = {
   'High': 'P0',
-  'Medium': 'P1',
+  'Normal': 'P1',
   'Low': 'P2'
 };
 

@@ -28,7 +28,7 @@ export interface TestCaseArgs {
   test_script?: TestScript;
   folder?: string;
   status?: 'Draft' | 'Approved' | 'Deprecated';
-  priority?: 'High' | 'Medium' | 'Low';
+  priority?: 'High' | 'Normal' | 'Low';
   precondition?: string;
   objective?: string;
   component?: string;

@@ -89,6 +89,9 @@ export class ZephyrToolHandlers {
       }
     }
     
+    // Always set status to Draft for new test cases
+    payload.status = 'Draft';
+    
     try {
       const response = await this.axiosInstance.post('/rest/atm/1.0/testcase', payload);
       
