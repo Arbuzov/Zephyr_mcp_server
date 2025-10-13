@@ -33,6 +33,8 @@ npm install -g zephyr-scale-mcp-server
 ## MCP Configuration
 
 ### Option 1: Using npx (Recommended - No installation required)
+
+**For Jira Cloud:**
 ```json
 {
   "mcpServers": {
@@ -40,8 +42,25 @@ npm install -g zephyr-scale-mcp-server
       "command": "npx",
       "args": ["zephyr-scale-mcp-server@latest"],
       "env": {
-        "ZEPHYR_API_KEY": "your-api-token",
-        "ZEPHYR_BASE_URL": "https://your-company.atlassian.net"
+        "ZEPHYR_BASE_URL": "https://your-company.atlassian.net",
+        "JIRA_USERNAME": "your-email@example.com",
+        "JIRA_API_TOKEN": "your-api-token"
+      }
+    }
+  }
+}
+```
+
+**For Jira Data Center:**
+```json
+{
+  "mcpServers": {
+    "zephyr-server": {
+      "command": "npx",
+      "args": ["zephyr-scale-mcp-server@latest"],
+      "env": {
+        "ZEPHYR_BASE_URL": "https://your-jira-server.com",
+        "ZEPHYR_API_KEY": "your-api-token"
       }
     }
   }
@@ -55,14 +74,32 @@ npm install -g zephyr-scale-mcp-server
 ```
 
 Then configure:
+
+**For Jira Cloud:**
 ```json
 {
   "mcpServers": {
     "zephyr-server": {
       "command": "zephyr-scale-mcp",
       "env": {
-        "ZEPHYR_API_KEY": "your-api-token",
-        "ZEPHYR_BASE_URL": "https://your-company.atlassian.net"
+        "ZEPHYR_BASE_URL": "https://your-company.atlassian.net",
+        "JIRA_USERNAME": "your-email@example.com",
+        "JIRA_API_TOKEN": "your-api-token"
+      }
+    }
+  }
+}
+```
+
+**For Jira Data Center:**
+```json
+{
+  "mcpServers": {
+    "zephyr-server": {
+      "command": "zephyr-scale-mcp",
+      "env": {
+        "ZEPHYR_BASE_URL": "https://your-jira-server.com",
+        "ZEPHYR_API_KEY": "your-api-token"
       }
     }
   }
@@ -369,10 +406,50 @@ If you were using the previous `create_test_case_with_bdd` tool, simply use `cre
 
 ## Authentication
 
-Get your API token from:
-1. Atlassian account settings
-2. Security → API tokens
-3. Create new token for Zephyr Scale
+The MCP server supports both Jira Cloud and Jira Data Center instances.
+
+### Jira Cloud Configuration
+
+For Jira Cloud instances (URLs ending in `.atlassian.net`):
+
+**Environment Variables:**
+```bash
+ZEPHYR_BASE_URL="https://your-company.atlassian.net"
+JIRA_USERNAME="your-email@example.com"
+JIRA_API_TOKEN="your-api-token"
+```
+
+**Get your API token:**
+1. Go to your Atlassian account settings
+2. Navigate to Security → API tokens
+3. Create a new token for Zephyr Scale access
+
+### Jira Data Center Configuration
+
+For Jira Data Center instances (self-hosted):
+
+**Environment Variables:**
+```bash
+ZEPHYR_BASE_URL="https://your-jira-server.com"
+ZEPHYR_API_KEY="your-api-token"
+```
+
+**Get your API token:**
+1. Log into your Jira Data Center instance
+2. Navigate to your profile settings
+3. Generate an API token with appropriate permissions
+
+### Automatic Detection
+
+The server automatically detects whether you're using Jira Cloud or Data Center based on your `ZEPHYR_BASE_URL`:
+
+- URLs containing `.atlassian.net` → **Jira Cloud**
+- Other URLs → **Jira Data Center**
+
+You can also explicitly specify the type using:
+```bash
+JIRA_TYPE="cloud"  # or "datacenter"
+```
 
 ## License
 

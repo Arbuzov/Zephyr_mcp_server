@@ -25,9 +25,9 @@ class ZephyrIntegrationTest extends ZephyrServerTest {
     console.log('Testing API connectivity...');
     
     // Check if we can reach the base URL
-    const baseUrl = process.env.ZEPHYR_SCALE_BASE_URL;
+    const baseUrl = process.env.ZEPHYR_BASE_URL;
     if (!baseUrl) {
-      throw new Error('ZEPHYR_SCALE_BASE_URL not configured');
+      throw new Error('ZEPHYR_BASE_URL not configured');
     }
 
     // In a real test, we'd make an actual HTTP request here

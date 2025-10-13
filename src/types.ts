@@ -77,3 +77,11 @@ export interface AddTestCasesToRunArgs {
   test_run_key: string;
   test_case_keys: string[];
 }
+
+export type JiraType = 'cloud' | 'datacenter';
+
+export interface JiraConfig {
+  type: JiraType;
+  baseUrl: string;
+  authHeaders: Record<string, string>;
+}

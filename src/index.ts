@@ -13,19 +13,9 @@ import axios from 'axios';
 import { toolSchemas } from './tool-schemas.js';
 import { ZephyrToolHandlers } from './tool-handlers.js';
 import { resourceList, readResource, setAxiosInstance } from './resources.js';
+import { createJiraConfig } from './utils.js';
 
-const BASE_URL = process.env.ZEPHYR_BASE_URL;
-const ACCESS_TOKEN = process.env.ZEPHYR_API_KEY;
-
-if (!ACCESS_TOKEN) {
-  throw new Error('ZEPHYR_API_KEY environment variable is required');
-}
-
-const headers = {
-  'Accept': '*/*',
-  'Authorization': `Bearer ${ACCESS_TOKEN}`,
-  'Content-Type': 'application/json',
-};
+// Jira configuration will be created when server starts
 
 class ZephyrServer {
   private server: Server;
@@ -36,7 +26,7 @@ class ZephyrServer {
     this.server = new Server(
       {
         name: 'zephyr-server',
-        version: '0.1.0',
+        version: '0.1.11',
       },
       {
         capabilities: {
@@ -46,9 +36,13 @@ class ZephyrServer {
       }
     );
 
+    // Create Jira configuration when server starts
+    // Note: This will throw an error if environment variables are not set
+    const jiraConfig = createJiraConfig();
+
     this.axiosInstance = axios.create({
-      baseURL: BASE_URL,
-      headers,
+      baseURL: jiraConfig.baseUrl,
+      headers: jiraConfig.authHeaders,
     });
 
     // Share axios instance with resources module for live data fetching

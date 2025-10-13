@@ -2,11 +2,14 @@ import { readFile } from 'fs/promises';
 import { extname } from 'path';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { AxiosInstance } from 'axios';
+import { createJiraConfig } from './utils.js';
 
 let axiosInstance: AxiosInstance | null = null;
+let jiraConfig: ReturnType<typeof createJiraConfig> | null = null;
 
 export function setAxiosInstance(instance: AxiosInstance) {
   axiosInstance = instance;
+  // Configuration will be created on-demand when making requests
 }
 
 export const resourceList = [
@@ -97,7 +100,20 @@ export async function readResource(uri: string) {
         'Axios instance not initialized. Cannot fetch live test case data.'
       );
     }
-    
+
+    // Get Jira configuration for this request
+    if (!jiraConfig) {
+      // Try to create configuration on-demand
+      try {
+        jiraConfig = createJiraConfig();
+      } catch (error) {
+        throw new McpError(
+          ErrorCode.InternalError,
+          `Jira configuration error: ${error instanceof Error ? error.message : String(error)}. Please ensure environment variables are properly configured.`
+        );
+      }
+    }
+
     try {
       const testCaseKey = uri.replace('zephyr://testcase/', '');
       if (!testCaseKey) {
@@ -106,16 +122,17 @@ export async function readResource(uri: string) {
           'Test case key is required. Use format: zephyr://testcase/TEST-KEY'
         );
       }
-      
+
       const response = await axiosInstance.get(`/rest/atm/1.0/testcase/${testCaseKey}`);
-      
+
       return {
         contents: [{
           uri: uri,
           mimeType: 'application/json',
           text: JSON.stringify({
-            description: `Live test case data for ${testCaseKey} retrieved from Zephyr Scale`,
+            description: `Live test case data for ${testCaseKey} retrieved from Zephyr Scale (${jiraConfig.type})`,
             testCaseKey: testCaseKey,
+            jiraType: jiraConfig.type,
             retrievedAt: new Date().toISOString(),
             data: response.data
           }, null, 2)
@@ -135,7 +152,7 @@ export async function readResource(uri: string) {
       } else {
         errorMessage = String(error);
       }
-      
+
       throw new McpError(
         ErrorCode.InternalError,
         `Failed to fetch test case: ${errorMessage}`
