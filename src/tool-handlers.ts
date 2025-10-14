@@ -434,7 +434,17 @@ export class ZephyrToolHandlers {
 
     try {
       const response = await this.axiosInstance.get(this.jiraConfig.apiEndpoints.search, { params });
-      const testCases = response.data.values || [];
+      
+      // Handle different response structures
+      let testCases = [];
+      if (Array.isArray(response.data)) {
+        testCases = response.data;
+      } else if (response.data.values && Array.isArray(response.data.values)) {
+        testCases = response.data.values;
+      } else if (response.data.results && Array.isArray(response.data.results)) {
+        testCases = response.data.results;
+      }
+      
       return {
         content: [
           {
