@@ -36,78 +36,71 @@ export const priorityMapping: { [key: string]: string } = {
 };
 
 /**
- * Detects whether the Jira instance is Cloud or Data Center based on the base URL
+ * Detects whether the Jira instance is Cloud or Data Center based on the base URL.
  */
 export function detectJiraType(baseUrl: string): 'cloud' | 'datacenter' {
-  // Jira Cloud URLs typically end with .atlassian.net
   if (baseUrl.includes('.atlassian.net')) {
     return 'cloud';
   }
-
-  // Check for explicit environment variable override
   const jiraType = process.env.JIRA_TYPE?.toLowerCase();
   if (jiraType === 'cloud' || jiraType === 'datacenter') {
     return jiraType;
   }
-
-  // Default to datacenter for backward compatibility
   return 'datacenter';
 }
 
 /**
- * Creates Jira configuration based on environment variables and detected type
+ * Returns the correct API endpoints based on the Jira type.
  */
-export function createJiraConfig(): { type: 'cloud' | 'datacenter'; baseUrl: string; authHeaders: Record<string, string> } {
-  const baseUrl = process.env.ZEPHYR_BASE_URL;
-  const apiKey = process.env.ZEPHYR_API_KEY;
-  const username = process.env.JIRA_USERNAME;
-  const apiToken = process.env.JIRA_API_TOKEN;
+export function getApiEndpoints(jiraType: 'cloud' | 'datacenter') {
+  if (jiraType === 'cloud') {
+    return {
+      testcase: '/testcases',
+      testrun: '/testruns',
+      folder: '/folders',
+      search: '/testcases/search',
+    };
+  } else {
+    return {
+      testcase: '/rest/atm/1.0/testcase',
+      testrun: '/rest/atm/1.0/testrun',
+      folder: '/rest/atm/1.0/folder',
+      search: '/rest/atm/1.0/testcase/search',
+    };
+  }
+}
 
-  if (!baseUrl) {
+/**
+ * Creates the complete Jira configuration object.
+ */
+export function createJiraConfig() {
+  const jiraBaseUrl = process.env.ZEPHYR_BASE_URL;
+  const apiKey = process.env.ZEPHYR_API_KEY;
+
+  if (!jiraBaseUrl) {
     throw new Error('ZEPHYR_BASE_URL environment variable is required');
   }
-
-  if (!apiKey && !(username && apiToken)) {
-    const detectedType = detectJiraType(baseUrl);
-    if (detectedType === 'cloud') {
-      throw new Error('Jira Cloud detected. Please provide JIRA_USERNAME and JIRA_API_TOKEN environment variables');
-    } else {
-      throw new Error('Jira Data Center detected. Please provide ZEPHYR_API_KEY environment variable');
-    }
+  if (!apiKey) {
+    throw new Error('ZEPHYR_API_KEY environment variable is required for both Cloud and Data Center authentication');
   }
 
-  const type = detectJiraType(baseUrl);
+  const type = detectJiraType(jiraBaseUrl);
+  const apiEndpoints = getApiEndpoints(type);
+  
+  const baseUrl = type === 'cloud' 
+    ? 'https://api.zephyrscale.smartbear.com/v2' 
+    : jiraBaseUrl;
 
-  let authHeaders: Record<string, string>;
-
-  if (type === 'cloud') {
-    // Jira Cloud uses Basic auth or API token
-    if (username && apiToken) {
-      const auth = Buffer.from(`${username}:${apiToken}`).toString('base64');
-      authHeaders = {
-        'Authorization': `Basic ${auth}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      };
-    } else {
-      throw new Error(`Jira Cloud authentication failed. Please ensure both JIRA_USERNAME and JIRA_API_TOKEN environment variables are set correctly for ${baseUrl}`);
-    }
-  } else {
-    // Jira Data Center uses Bearer token
-    if (apiKey) {
-      authHeaders = {
-        'Authorization': `Bearer ${apiKey}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      };
-    } else {
-      throw new Error(`Jira Data Center authentication failed. Please ensure ZEPHYR_API_KEY environment variable is set correctly for ${baseUrl}`);
-    }
-  }
+  const authHeaders = {
+    'Authorization': `Bearer ${apiKey}`,
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
 
   return {
     type,
     baseUrl,
     authHeaders,
+    apiEndpoints,
   };
 }

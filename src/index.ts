@@ -15,18 +15,17 @@ import { ZephyrToolHandlers } from './tool-handlers.js';
 import { resourceList, readResource, setAxiosInstance } from './resources.js';
 import { createJiraConfig } from './utils.js';
 
-// Jira configuration will be created when server starts
-
 class ZephyrServer {
   private server: Server;
-  private axiosInstance;
   private toolHandlers: ZephyrToolHandlers;
 
   constructor() {
+    const jiraConfig = createJiraConfig();
+
     this.server = new Server(
       {
         name: 'zephyr-server',
-        version: '0.1.11',
+        version: '0.2.0',
       },
       {
         capabilities: {
@@ -36,19 +35,14 @@ class ZephyrServer {
       }
     );
 
-    // Create Jira configuration when server starts
-    // Note: This will throw an error if environment variables are not set
-    const jiraConfig = createJiraConfig();
-
-    this.axiosInstance = axios.create({
+    const axiosInstance = axios.create({
       baseURL: jiraConfig.baseUrl,
       headers: jiraConfig.authHeaders,
     });
+    
+    setAxiosInstance(axiosInstance);
 
-    // Share axios instance with resources module for live data fetching
-    setAxiosInstance(this.axiosInstance);
-
-    this.toolHandlers = new ZephyrToolHandlers(this.axiosInstance);
+    this.toolHandlers = new ZephyrToolHandlers(axiosInstance, jiraConfig);
     this.setupToolHandlers();
     this.setupResourceHandlers();
     

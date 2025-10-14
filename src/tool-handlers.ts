@@ -1,22 +1,26 @@
 import { AxiosInstance } from 'axios';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { 
-  TestCaseArgs, 
-  UpdateBddArgs, 
-  FolderArgs, 
-  TestRunArgs, 
-  SearchTestCasesArgs, 
-  AddTestCasesToRunArgs 
+import {
+  TestCaseArgs,
+  UpdateBddArgs,
+  FolderArgs,
+  TestRunArgs,
+  SearchTestCasesArgs,
+  AddTestCasesToRunArgs,
+  JiraConfig
 } from './types.js';
 import { convertToGherkin, customPriorityMapping, priorityMapping } from './utils.js';
 
 export class ZephyrToolHandlers {
-  constructor(private axiosInstance: AxiosInstance) {}
+  constructor(
+    private axiosInstance: AxiosInstance,
+    private jiraConfig: JiraConfig
+  ) {}
 
   async getTestCase(args: any) {
     const { test_case_key } = args;
     try {
-      const response = await this.axiosInstance.get(`/rest/atm/1.0/testcase/${test_case_key}`);
+      const response = await this.axiosInstance.get(`${this.jiraConfig.apiEndpoints.testcase}/${test_case_key}`);
       return {
         content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
       };
@@ -26,9 +30,9 @@ export class ZephyrToolHandlers {
   }
 
   async createTestCase(args: TestCaseArgs) {
-    const { 
-      project_key, 
-      name, 
+    const {
+      project_key,
+      name,
       test_script,
       folder,
       status,
@@ -43,13 +47,13 @@ export class ZephyrToolHandlers {
       custom_fields,
       parameters
     } = args;
-    
+
     // Build the basic payload
     const payload: any = {
       projectKey: project_key,
       name: name
     };
-    
+
     // Add optional fields
     if (folder) payload.folder = folder;
     if (status) payload.status = status;
@@ -63,13 +67,13 @@ export class ZephyrToolHandlers {
     if (issue_links && issue_links.length > 0) payload.issueLinks = issue_links;
     if (custom_fields) payload.customFields = custom_fields;
     if (parameters) payload.parameters = parameters;
-    
+
     // Handle test script
     if (test_script) {
       payload.testScript = {
         type: test_script.type
       };
-      
+
       if (test_script.type === 'STEP_BY_STEP' && test_script.steps) {
         payload.testScript.steps = test_script.steps.map((step: any) => {
           const stepObj: any = {};
@@ -88,21 +92,21 @@ export class ZephyrToolHandlers {
         }
       }
     }
-    
+
     // Always set status to Draft for new test cases
     payload.status = 'Draft';
-    
+
     try {
-      const response = await this.axiosInstance.post('/rest/atm/1.0/testcase', payload);
-      
+      const response = await this.axiosInstance.post(this.jiraConfig.apiEndpoints.testcase, payload);
+
       if (response.status === 201) {
         const testKey = response.data.key || 'Unknown';
         return {
           content: [
             {
               type: 'text',
-              text: `✅ Test case created successfully: ${testKey}\n${JSON.stringify({ 
-                key: testKey, 
+              text: `✅ Test case created successfully: ${testKey}\n${JSON.stringify({
+                key: testKey,
                 type: test_script?.type || 'none',
                 hasSteps: test_script?.type === 'STEP_BY_STEP' ? test_script.steps?.length || 0 : undefined,
                 hasText: (test_script?.type === 'PLAIN_TEXT' || test_script?.type === 'BDD') ? !!test_script.text : undefined
@@ -132,24 +136,23 @@ export class ZephyrToolHandlers {
 
   async updateTestCaseBdd(args: UpdateBddArgs) {
     const { test_case_key, bdd_content } = args;
-    
+
     try {
-      // First get the current test case
-      const getResponse = await this.axiosInstance.get(`/rest/atm/1.0/testcase/${test_case_key}`);
-      if (getResponse.status !== 200) {
-        throw new Error(`Failed to get test case ${test_case_key}`);
-      }
-      
-      const gherkinContent = convertToGherkin(bdd_content);
+      // First, get the existing test case data
+      const getResponse = await this.axiosInstance.get(`${this.jiraConfig.apiEndpoints.testcase}/${test_case_key}`);
+      const testCaseData = getResponse.data;
+
+      // Prepare the payload with only the fields that need updating
       const payload = {
-        testScript: {
-          type: 'BDD',
-          text: gherkinContent
-        }
+        testScript: testCaseData.testScript,
       };
-      
-      const updateResponse = await this.axiosInstance.put(`/rest/atm/1.0/testcase/${test_case_key}`, payload);
-      
+
+      // Update test script with new BDD content
+      payload.testScript.text = convertToGherkin(bdd_content);
+
+      // Update the test case
+      const updateResponse = await this.axiosInstance.put(`${this.jiraConfig.apiEndpoints.testcase}/${test_case_key}`, payload);
+
       if (updateResponse.status === 200) {
         return {
           content: [
@@ -172,32 +175,32 @@ export class ZephyrToolHandlers {
 
   async createFolder(args: FolderArgs) {
     const { project_key, name, parent_folder_path, folder_type = 'TEST_CASE' } = args;
-    
-    let folderName = name;
-    if (parent_folder_path && !name.startsWith('/')) {
-      const parentPath = parent_folder_path.startsWith('/') ? parent_folder_path : `/${parent_folder_path}`;
-      folderName = `${parentPath}/${name}`;
-    } else if (!name.startsWith('/')) {
-      folderName = `/${name}`;
-    }
-    
-    const payload = {
+
+    const payload: any = {
       projectKey: project_key,
-      name: folderName,
-      type: folder_type,
+      name: name,
+      folderType: folder_type,
     };
-    
+
+    if (parent_folder_path) {
+      payload.parentFolderPath = parent_folder_path;
+    }
+
     try {
-      const response = await this.axiosInstance.post('/rest/atm/1.0/folder', payload);
-      
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `✅ Folder created successfully: ${response.data.name} (ID: ${response.data.id})\n${JSON.stringify(response.data, null, 2)}`,
-          },
-        ],
-      };
+      const response = await this.axiosInstance.post(this.jiraConfig.apiEndpoints.folder, payload);
+
+      if (response.status === 201) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `✅ Folder created successfully: ${response.data.name} (ID: ${response.data.id})\n${JSON.stringify(response.data, null, 2)}`,
+            },
+          ],
+        };
+      } else {
+        throw new Error(`Failed to create folder: ${response.status}`);
+      }
     } catch (error) {
       throw new McpError(
         ErrorCode.InternalError,
@@ -208,78 +211,40 @@ export class ZephyrToolHandlers {
 
   async getTestRunCases(args: any) {
     const { test_run_key } = args;
-    
     try {
-      const response = await this.axiosInstance.get(`/rest/atm/1.0/testrun/${test_run_key}`);
-      
-      if (response.status === 200) {
-        const data = response.data;
-        const testCaseKeys = data.items.map((item: any) => item.testCaseKey);
-        const statuses = data.items.map((item: any) => item.status);
-        const runIds = data.items.map((item: any) => item.id);
-        
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `✅ Retrieved test cases from ${test_run_key}:\nTest Case Keys: ${JSON.stringify(testCaseKeys, null, 2)}\nStatuses: ${JSON.stringify(statuses, null, 2)}\nRun IDs: ${JSON.stringify(runIds, null, 2)}`,
-            },
-          ],
-        };
-      } else {
-        throw new Error(`Failed to retrieve data: ${response.status}`);
-      }
+      const response = await this.axiosInstance.get(`${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}`);
+      const testCases = response.data.items?.map((item: any) => item.testCaseKey) || [];
+      return {
+        content: [{ type: 'text', text: JSON.stringify(testCases, null, 2) }],
+      };
     } catch (error) {
-      throw new McpError(
-        ErrorCode.InternalError,
-        `Failed to get test run cases: ${error instanceof Error ? error.message : String(error)}`
-      );
+      throw new McpError(ErrorCode.InternalError, `Failed to get test run cases: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async deleteTestCase(args: any) {
     const { test_case_key } = args;
-    
     try {
-      const response = await this.axiosInstance.delete(`/rest/atm/1.0/testcase/${test_case_key}`);
-      
+      const response = await this.axiosInstance.delete(`${this.jiraConfig.apiEndpoints.testcase}/${test_case_key}`);
       if (response.status === 204) {
         return {
-          content: [
-            {
-              type: 'text',
-              text: `✅ Test case ${test_case_key} deleted successfully`,
-            },
-          ],
+          content: [{ type: 'text', text: `Test case ${test_case_key} deleted successfully.` }],
         };
       } else {
-        throw new Error(`Unexpected status code: ${response.status}`);
+        return {
+          content: [{ type: 'text', text: `Failed to delete test case. Status: ${response.status}` }],
+          isError: true,
+        };
       }
     } catch (error) {
-      let errorMessage = 'Unknown error';
-      if (error instanceof Error && 'response' in error) {
-        const axiosError = error as any;
-        if (axiosError.response?.status === 404) {
-          errorMessage = `Test case ${test_case_key} not found`;
-        } else {
-          errorMessage = `Status: ${axiosError.response?.status}, Data: ${JSON.stringify(axiosError.response?.data)}`;
-        }
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      } else {
-        errorMessage = String(error);
-      }
-      throw new McpError(
-        ErrorCode.InternalError,
-        `Failed to delete test case: ${errorMessage}`
-      );
+      throw new McpError(ErrorCode.InternalError, `Failed to delete test case: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async createTestRun(args: TestRunArgs) {
-    const { 
-      project_key, 
-      name, 
+    const {
+      project_key,
+      name,
       test_case_keys,
       test_plan_key,
       folder,
@@ -290,13 +255,13 @@ export class ZephyrToolHandlers {
       environment,
       custom_fields
     } = args;
-    
+
     // Build the basic payload
     const payload: any = {
       projectKey: project_key,
       name: name,
     };
-    
+
     // Add optional fields
     if (test_case_keys && test_case_keys.length > 0) {
       payload.items = test_case_keys.map((testCaseKey: string) => ({
@@ -311,17 +276,17 @@ export class ZephyrToolHandlers {
     if (environment) payload.environment = environment;
     if (custom_fields) payload.customFields = custom_fields;
     if (test_plan_key) payload.testPlanKey = test_plan_key;
-    
+
     try {
-      const response = await this.axiosInstance.post('/rest/atm/1.0/testrun', payload);
-      
+      const response = await this.axiosInstance.post(this.jiraConfig.apiEndpoints.testrun, payload);
+
       if (response.status === 201) {
         const testRunKey = response.data.key || 'Unknown';
         return {
           content: [
             {
               type: 'text',
-              text: `✅ Test run created successfully: ${testRunKey}\n${JSON.stringify({ 
+              text: `✅ Test run created successfully: ${testRunKey}\n${JSON.stringify({
                 key: testRunKey,
                 name: name,
                 testCaseCount: test_case_keys?.length || 0,
@@ -352,22 +317,16 @@ export class ZephyrToolHandlers {
 
   async getTestRun(args: any) {
     const { test_run_key } = args;
-    
     try {
-      const response = await this.axiosInstance.get(`/rest/atm/1.0/testrun/${test_run_key}`);
-      
-      if (response.status === 200) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
-        };
-      } else {
-        throw new Error(`Failed to retrieve test run: ${response.status}`);
-      }
+      const response = await this.axiosInstance.get(`${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}`);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(response.data, null, 2),
+          },
+        ],
+      };
     } catch (error) {
       let errorMessage = 'Unknown error';
       if (error instanceof Error && 'response' in error) {
@@ -391,7 +350,7 @@ export class ZephyrToolHandlers {
 
   async getTestExecution(args: any) {
     const { execution_id, test_run_keys } = args;
-    
+
     // Require users to specify test runs to search - fail immediately if not provided
     if (!test_run_keys || !Array.isArray(test_run_keys) || test_run_keys.length === 0) {
       throw new McpError(
@@ -399,23 +358,23 @@ export class ZephyrToolHandlers {
         'test_run_keys is required. Please provide an array of test run keys to search in (e.g., ["PROJ-C152", "PROJ-C161"]). Use get_test_run_cases to find test runs if needed.'
       );
     }
-    
+
     try {
       const testRunsToTry = test_run_keys;
-      
+
       const searchResults: any[] = [];
-      
+
       for (const testRunKey of testRunsToTry) {
         try {
-          const response = await this.axiosInstance.get(`/rest/atm/1.0/testrun/${testRunKey}/testresults`);
-          
+          const response = await this.axiosInstance.get(`${this.jiraConfig.apiEndpoints.testrun}/${testRunKey}/testresults`);
+
           if (response.status === 200 && response.data) {
             // Look for the specific execution_id in the results
             const results = Array.isArray(response.data) ? response.data : [response.data];
-            const matchingExecution = results.find((result: any) => 
+            const matchingExecution = results.find((result: any) =>
               result.id && result.id.toString() === execution_id
             );
-            
+
             if (matchingExecution) {
               return {
                 content: [
@@ -426,7 +385,7 @@ export class ZephyrToolHandlers {
                 ],
               };
             }
-            
+
             // Store search info for debugging
             searchResults.push({
               testRunKey,
@@ -443,7 +402,7 @@ export class ZephyrToolHandlers {
           continue;
         }
       }
-      
+
       // If not found, provide helpful debugging info
       throw new Error(`Test execution ${execution_id} not found in any of the ${testRunsToTry.length} test runs searched. Search results: ${JSON.stringify(searchResults, null, 2)}`);
     } catch (error) {
@@ -462,41 +421,27 @@ export class ZephyrToolHandlers {
 
   async searchTestCasesByFolder(args: SearchTestCasesArgs) {
     const { project_key, folder_path, max_results = 100 } = args;
-    
+    const params = {
+      projectKey: project_key,
+      folder: folder_path,
+      maxResults: max_results,
+    };
+
     try {
-      // Use the search endpoint with query parameter
-      // The Zephyr Scale API requires a query parameter in JQL-like format
-      const query = `projectKey = "${project_key}" AND folder = "${folder_path}"`;
-      const params: any = {
-        query: query,
-        maxResults: max_results
+      const response = await this.axiosInstance.get(this.jiraConfig.apiEndpoints.search, { params });
+      const testCases = response.data.values || [];
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `✅ Found ${testCases.length} test cases in folder "${folder_path}":\n${JSON.stringify({
+              folder: folder_path,
+              testCaseKeys: testCases.map((tc: any) => tc.key),
+              totalCount: testCases.length
+            }, null, 2)}`,
+          },
+        ],
       };
-      
-      const response = await this.axiosInstance.get('/rest/atm/1.0/testcase/search', { params });
-      
-      if (response.status === 200) {
-        const testCases = response.data;
-        const testCaseKeys = Array.isArray(testCases) 
-          ? testCases.map((tc: any) => tc.key) 
-          : testCases.values 
-            ? testCases.values.map((tc: any) => tc.key)
-            : [];
-        
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `✅ Found ${testCaseKeys.length} test cases in folder "${folder_path}":\n${JSON.stringify({
-                folder: folder_path,
-                testCaseKeys: testCaseKeys,
-                totalCount: testCaseKeys.length
-              }, null, 2)}`,
-            },
-          ],
-        };
-      } else {
-        throw new Error(`Failed to search test cases: ${response.status}`);
-      }
     } catch (error) {
       let errorMessage = 'Unknown error';
       if (error instanceof Error && 'response' in error) {
@@ -520,108 +465,58 @@ export class ZephyrToolHandlers {
 
   async addTestCasesToRun(args: AddTestCasesToRunArgs) {
     const { test_run_key, test_case_keys } = args;
-    
+
     try {
-      // Get the current test run first
-      const getResponse = await this.axiosInstance.get(`/rest/atm/1.0/testrun/${test_run_key}`);
-      if (getResponse.status !== 200) {
-        throw new Error(`Failed to get test run ${test_run_key}`);
-      }
-      
-      const currentTestRun = getResponse.data;
-      const existingItems = currentTestRun.items || [];
-      
-      // Create new items for the test cases to add
-      const newItems = test_case_keys.map((testCaseKey: string) => ({
-        testCaseKey: testCaseKey
-      }));
-      
-      // Combine existing and new items (avoid duplicates)
-      const existingKeys = existingItems.map((item: any) => item.testCaseKey);
-      const uniqueNewItems = newItems.filter((item: any) => !existingKeys.includes(item.testCaseKey));
-      const updatedItems = [...existingItems, ...uniqueNewItems];
-      
-      // Try multiple approaches to update the test run
-      let response;
-      let method = 'unknown';
-      
-      // Approach 1: Try PUT with minimal payload
-      try {
-        const minimalPayload = {
-          name: currentTestRun.name,
-          projectKey: currentTestRun.projectKey,
-          items: updatedItems
-        };
-        
-        response = await this.axiosInstance.put(`/rest/atm/1.0/testrun/${test_run_key}`, minimalPayload);
-        method = 'PUT-minimal';
-      } catch (putError) {
-        console.error('PUT minimal approach failed, trying POST approach...');
-        
-        // Approach 2: Try POST to add test cases endpoint
-        try {
-          const postPayload = test_case_keys.map((testCaseKey: string) => ({ testCaseKey }));
-          response = await this.axiosInstance.post(`/rest/atm/1.0/testrun/${test_run_key}/testcases`, postPayload);
-          method = 'POST-testcases';
-        } catch (postError) {
-          console.error('POST testcases approach failed, trying PUT with full payload...');
-          
-          // Approach 3: Try PUT with full payload but clean read-only fields
-          const fullPayload = { ...currentTestRun };
-          fullPayload.items = updatedItems;
-          
-          // Remove read-only fields
-          delete fullPayload.key;
-          delete fullPayload.createdOn;
-          delete fullPayload.createdBy;
-          delete fullPayload.executionTime;
-          delete fullPayload.estimatedTime;
-          delete fullPayload.testCaseCount;
-          delete fullPayload.issueCount;
-          delete fullPayload.executionSummary;
-          delete fullPayload.status;
-          
-          response = await this.axiosInstance.put(`/rest/atm/1.0/testrun/${test_run_key}`, fullPayload);
-          method = 'PUT-full';
+      // For Data Center, we need to get the current items and then update
+      if (this.jiraConfig.type === 'datacenter') {
+        const getResponse = await this.axiosInstance.get(`${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}`);
+        const existingItems = getResponse.data.items || [];
+        const existingKeys = new Set(existingItems.map((item: any) => item.testCaseKey));
+
+        const newItems = test_case_keys
+          .filter(key => !existingKeys.has(key))
+          .map(key => ({ testCaseKey: key, testResultStatus: 'Not Executed' }));
+
+        if (newItems.length > 0) {
+          let response;
+          if (this.jiraConfig.type === 'datacenter') {
+            const minimalPayload = {
+              items: [...existingItems, ...newItems]
+            };
+            response = await this.axiosInstance.put(`${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}`, minimalPayload);
+          } else {
+            const postPayload = { items: newItems.map(item => item.testCaseKey) };
+            response = await this.axiosInstance.post(`${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}/testcases`, postPayload);
+          }
+
+          if (response.status === 200 || response.status === 201 || response.status === 204) {
+            return {
+              content: [{ type: 'text', text: `Added ${newItems.length} new test cases to test run ${test_run_key}.` }],
+            };
+          }
+        } else {
+          return {
+            content: [{ type: 'text', text: 'All specified test cases are already in the test run.' }],
+          };
         }
-      }
-      
-      if (response && (response.status === 200 || response.status === 201)) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `✅ Successfully added ${uniqueNewItems.length} test cases to ${test_run_key} using ${method}:\n${JSON.stringify({
-                testRunKey: test_run_key,
-                addedTestCases: test_case_keys,
-                uniqueNewCases: uniqueNewItems.length,
-                totalTestCases: updatedItems.length,
-                method: method
-              }, null, 2)}`,
-            },
-          ],
-        };
       } else {
-        throw new Error(`All update approaches failed. Last response status: ${response?.status || 'unknown'}`);
+        // For Cloud, we can just post the new test case keys
+        const fullPayload = { items: test_case_keys };
+        const response = await this.axiosInstance.put(`${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}`, fullPayload);
+
+        if (response.status === 200 || response.status === 204) {
+          return {
+            content: [{ type: 'text', text: `Successfully updated test cases for test run ${test_run_key}.` }],
+          };
+        }
       }
     } catch (error) {
-      let errorMessage = 'Unknown error';
-      if (error instanceof Error && 'response' in error) {
-        const axiosError = error as any;
-        if (axiosError.response?.status === 404) {
-          errorMessage = `Test run ${test_run_key} not found`;
-        } else {
-          errorMessage = `Status: ${axiosError.response?.status}, Data: ${JSON.stringify(axiosError.response?.data)}`;
-        }
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      } else {
-        errorMessage = String(error);
-      }
-      throw new McpError(
-        ErrorCode.InternalError,
-        `Failed to add test cases to run: ${errorMessage}`
-      );
+      throw new McpError(ErrorCode.InternalError, `Failed to add test cases: ${error instanceof Error ? error.message : String(error)}`);
     }
+
+    return {
+      content: [{ type: 'text', text: 'An unexpected error occurred.' }],
+      isError: true,
+    };
   }
 }

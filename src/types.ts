@@ -80,8 +80,16 @@ export interface AddTestCasesToRunArgs {
 
 export type JiraType = 'cloud' | 'datacenter';
 
+export interface ApiEndpoints {
+  testcase: string;
+  testrun: string;
+  folder: string;
+  search: string;
+}
+
 export interface JiraConfig {
   type: JiraType;
   baseUrl: string;
   authHeaders: Record<string, string>;
+  apiEndpoints: ApiEndpoints;
 }

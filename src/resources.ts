@@ -101,9 +101,7 @@ export async function readResource(uri: string) {
       );
     }
 
-    // Get Jira configuration for this request
     if (!jiraConfig) {
-      // Try to create configuration on-demand
       try {
         jiraConfig = createJiraConfig();
       } catch (error) {
@@ -123,7 +121,7 @@ export async function readResource(uri: string) {
         );
       }
 
-      const response = await axiosInstance.get(`/rest/atm/1.0/testcase/${testCaseKey}`);
+      const response = await axiosInstance.get(`${jiraConfig.apiEndpoints.testcase}/${testCaseKey}`);
 
       return {
         contents: [{
@@ -168,7 +166,7 @@ export async function readResource(uri: string) {
           mimeType: 'application/json',
           text: JSON.stringify({
             description: "Example payload sent to Zephyr Scale API for BDD test case creation",
-            endpoint: "POST /rest/atm/1.0/testcase",
+            endpoint: "POST /testcases (Cloud) or /rest/atm/1.0/testcase (Data Center)",
             payload: {
               projectKey: "PROJ",
               name: "User Authentication with Privacy Policy",
@@ -201,7 +199,7 @@ export async function readResource(uri: string) {
           mimeType: 'application/json',
           text: JSON.stringify({
             description: "Example payload for creating a step-by-step test case",
-            endpoint: "POST /rest/atm/1.0/testcase",
+            endpoint: "POST /testcases (Cloud) or /rest/atm/1.0/testcase (Data Center)",
             payload: {
               projectKey: "PROJ",
               name: "User Login Test",
