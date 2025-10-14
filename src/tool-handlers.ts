@@ -421,9 +421,14 @@ export class ZephyrToolHandlers {
 
   async searchTestCasesByFolder(args: SearchTestCasesArgs) {
     const { project_key, folder_path, max_results = 100 } = args;
+    
+    // Build JQL-style query for Zephyr Scale API
+    // Escape double quotes in folder path
+    const escapedFolderPath = folder_path.replace(/"/g, '\\"');
+    const query = `projectKey = "${project_key}" AND folder = "${escapedFolderPath}"`;
+    
     const params = {
-      projectKey: project_key,
-      folder: folder_path,
+      query: query,
       maxResults: max_results,
     };
 
@@ -436,6 +441,7 @@ export class ZephyrToolHandlers {
             type: 'text',
             text: `✅ Found ${testCases.length} test cases in folder "${folder_path}":\n${JSON.stringify({
               folder: folder_path,
+              query: query,
               testCaseKeys: testCases.map((tc: any) => tc.key),
               totalCount: testCases.length
             }, null, 2)}`,
