@@ -141,16 +141,60 @@ export class ZephyrToolHandlers {
       // First, get the existing test case data
       const getResponse = await this.axiosInstance.get(`${this.jiraConfig.apiEndpoints.testcase}/${test_case_key}`);
       const testCaseData = getResponse.data;
+      // Convert incoming BDD markdown (fallback to raw content if conversion returns empty)
+      const converted = convertToGherkin(bdd_content);
+      const finalText = converted && converted.trim().length > 0 ? converted : bdd_content;
 
-      // Prepare the payload with only the fields that need updating
-      const payload = {
-        testScript: testCaseData.testScript,
+      // Build a payload aligned with Zephyr Scale Server's update schema.
+      // Only include fields that exist to avoid accidental nulling; required fields must be present.
+      const payload: any = {};
+
+      // Required base fields (schema requires these on Server/Data Center). If missing, throw.
+      const requiredFields: Array<[string, any]> = [
+        ['projectKey', testCaseData.projectKey],
+        ['name', testCaseData.name],
+        ['status', testCaseData.status],
+        ['priority', testCaseData.priority]
+      ];
+
+      for (const [field, value] of requiredFields) {
+        if (value === undefined || value === null || value === '') {
+          throw new McpError(ErrorCode.InternalError, `Existing test case is missing required field '${field}' needed for update.`);
+        }
+        payload[field] = value;
+      }
+
+      // Optional simple scalar/string fields
+      const optionalScalarFields = [
+        'objective',
+        'precondition',
+        'folder',
+        'component',
+        'owner',
+        'estimatedTime'
+      ];
+      for (const field of optionalScalarFields) {
+        if (testCaseData[field] !== undefined) payload[field] = testCaseData[field];
+      }
+
+      // Arrays / objects
+      if (Array.isArray(testCaseData.labels)) payload.labels = testCaseData.labels;
+      if (testCaseData.customFields) payload.customFields = testCaseData.customFields;
+      if (testCaseData.parameters) payload.parameters = testCaseData.parameters;
+      // issueLinks preferred; map deprecated issueKey if present and issueLinks absent
+      if (Array.isArray(testCaseData.issueLinks)) {
+        payload.issueLinks = testCaseData.issueLinks;
+      } else if (testCaseData.issueKey) {
+        payload.issueLinks = [testCaseData.issueKey];
+      }
+
+      // Build testScript. Force type to BDD when performing a BDD update.
+      payload.testScript = {
+        type: 'BDD',
+        text: finalText
       };
 
-      // Update test script with new BDD content
-      payload.testScript.text = convertToGherkin(bdd_content);
-
-      // Update the test case
+      // PUT update
       const updateResponse = await this.axiosInstance.put(`${this.jiraConfig.apiEndpoints.testcase}/${test_case_key}`, payload);
 
       if (updateResponse.status === 200) {
@@ -158,13 +202,13 @@ export class ZephyrToolHandlers {
           content: [
             {
               type: 'text',
-              text: `✅ Updated ${test_case_key} with BDD content successfully`,
+              text: `✅ Updated ${test_case_key} with BDD content successfully\nPayload summary: ${JSON.stringify({ textLength: finalText.length, projectKey: payload.projectKey, preservedLabels: payload.labels?.length || 0 }, null, 2)}`,
             },
           ],
         };
-      } else {
-        throw new Error(`Failed to update ${test_case_key}: ${updateResponse.status}`);
       }
+
+      throw new Error(`Failed to update ${test_case_key}: ${updateResponse.status}`);
     } catch (error) {
       throw new McpError(
         ErrorCode.InternalError,
