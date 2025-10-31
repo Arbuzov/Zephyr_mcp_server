@@ -92,6 +92,7 @@ The server provides access to various resources through URI schemes:
 
 ### Test Execution & Search
 - `get_test_execution`: Get detailed individual test execution results.
+- `update_test_execution_status`: Update the execution status of a test case within a test run (Pass, Fail, Blocked, etc.).
 - `search_test_cases_by_folder`: Search for test cases in a specific folder.
 
 ### Organization
@@ -125,6 +126,19 @@ The server provides access to various resources through URI schemes:
   "test_case_keys": ["PROJ-T123", "PROJ-T124", "PROJ-T125"]
 }
 ```
+
+### Update Test Execution Status
+```json
+{
+  "test_run_key": "PROJ-R123",
+  "test_case_key": "PROJ-T123",
+  "status": "Pass",
+  "comment": "All test steps passed successfully",
+  "execution_time": 120000,
+  "environment": "Production"
+}
+```
+**Note**: This tool allows you to directly update the status of test executions within a test run. Supported statuses are: Pass, Fail, Blocked, Not Executed, and In Progress.
 
 ## Authentication
 

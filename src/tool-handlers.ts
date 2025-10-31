@@ -7,6 +7,9 @@ import {
   TestRunArgs,
   SearchTestCasesArgs,
   AddTestCasesToRunArgs,
+  UpdateTestExecutionStatusArgs,
+  TestExecutionItem,
+  ExecutionUpdatePayload,
   JiraConfig
 } from './types.js';
 import { convertToGherkin, customPriorityMapping, priorityMapping } from './utils.js';
@@ -578,5 +581,104 @@ export class ZephyrToolHandlers {
       content: [{ type: 'text', text: 'An unexpected error occurred.' }],
       isError: true,
     };
+  }
+
+  async updateTestExecutionStatus(args: UpdateTestExecutionStatusArgs) {
+    const {
+      test_run_key,
+      test_case_key,
+      status,
+      comment,
+      execution_time,
+      actual_end_date,
+      assigned_to,
+      environment,
+      custom_fields
+    } = args;
+
+    try {
+      // First, get the test run to find the execution ID for the test case
+      const testRunResponse = await this.axiosInstance.get(`${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}`);
+      
+      if (!testRunResponse.data || !testRunResponse.data.items) {
+        throw new Error(`Test run ${test_run_key} not found or has no items`);
+      }
+
+      // Find the execution item for the specified test case
+      const executionItem = testRunResponse.data.items.find((item: TestExecutionItem) => item.testCaseKey === test_case_key);
+      
+      if (!executionItem) {
+        throw new Error(`Test case ${test_case_key} not found in test run ${test_run_key}`);
+      }
+
+      // Build the update payload and endpoint based on API type
+      const updatePayload: ExecutionUpdatePayload = {};
+      let updateEndpoint: string;
+      
+      if (this.jiraConfig.type === 'cloud') {
+        // Cloud API v2 format
+        updatePayload.status = status;
+        if (comment) updatePayload.comment = comment;
+        if (execution_time !== undefined) updatePayload.executionTime = execution_time;
+        if (actual_end_date) updatePayload.actualEndDate = actual_end_date;
+        if (assigned_to) updatePayload.assignedTo = assigned_to;
+        if (environment) updatePayload.environment = environment;
+        if (custom_fields) updatePayload.customFields = custom_fields;
+        
+        // Cloud uses execution ID with testexecutions endpoint
+        const executionId = executionItem.id;
+        updateEndpoint = `/testexecutions/${executionId}`;
+      } else {
+        // Data Center API v1 format
+        updatePayload.testResultStatus = status;
+        if (comment) updatePayload.comment = comment;
+        if (execution_time !== undefined) updatePayload.executionTime = execution_time;
+        if (actual_end_date) updatePayload.actualEndDate = actual_end_date;
+        if (assigned_to) updatePayload.assignedTo = assigned_to;
+        if (environment) updatePayload.environment = environment;
+        if (custom_fields) updatePayload.customFields = custom_fields;
+        
+        // Data Center uses testResultId
+        const testResultId = executionItem.id;
+        updateEndpoint = `${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}/testresults/${testResultId}`;
+      }
+
+      // Execute the update
+      const response = await this.axiosInstance.put(updateEndpoint, updatePayload);
+
+      if (response.status === 200 || response.status === 204) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `✅ Successfully updated test execution status for ${test_case_key} in ${test_run_key}\nStatus: ${status}\n${JSON.stringify({
+                testCaseKey: test_case_key,
+                testRunKey: test_run_key,
+                newStatus: status,
+                hasComment: !!comment,
+                executionTime: execution_time,
+                environment: environment || 'Not specified'
+              }, null, 2)}`,
+            },
+          ],
+        };
+      } else {
+        throw new Error(`Unexpected status code: ${response.status}`);
+      }
+    } catch (error) {
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error && 'response' in error) {
+        const axiosError = error as any;
+        errorMessage = `Status: ${axiosError.response?.status}, Data: ${JSON.stringify(axiosError.response?.data)}`;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = String(error);
+      }
+      throw new McpError(
+        ErrorCode.InternalError,
+        `Failed to update test execution status: ${errorMessage}`
+      );
+    }
   }
 }

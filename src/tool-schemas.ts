@@ -357,4 +357,52 @@ export const toolSchemas = [
       required: ['test_run_key', 'test_case_keys'],
     },
   },
+  {
+    name: 'update_test_execution_status',
+    description: 'Update the execution status of a test case within a test run. This allows you to mark tests as Pass, Fail, Blocked, etc.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        test_run_key: {
+          type: 'string',
+          description: 'Test run key (e.g., PROJ-R123)',
+        },
+        test_case_key: {
+          type: 'string',
+          description: 'Test case key to update (e.g., PROJ-T123)',
+        },
+        status: {
+          type: 'string',
+          description: 'Execution status to set',
+          enum: ['Pass', 'Fail', 'Blocked', 'Not Executed', 'In Progress'],
+        },
+        comment: {
+          type: 'string',
+          description: 'Optional comment about the test execution',
+        },
+        execution_time: {
+          type: 'number',
+          description: 'Optional execution time in milliseconds',
+        },
+        actual_end_date: {
+          type: 'string',
+          description: 'Optional actual end date in ISO format (e.g., 2024-01-15T10:30:00Z)',
+        },
+        assigned_to: {
+          type: 'string',
+          description: 'Optional user to assign the test execution to',
+        },
+        environment: {
+          type: 'string',
+          description: 'Optional test environment',
+        },
+        custom_fields: {
+          type: 'object',
+          description: 'Optional custom fields object',
+          additionalProperties: true,
+        },
+      },
+      required: ['test_run_key', 'test_case_key', 'status'],
+    },
+  },
 ];
