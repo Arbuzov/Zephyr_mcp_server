@@ -601,19 +601,21 @@ export class ZephyrToolHandlers {
       const testRunResponse = await this.axiosInstance.get(`${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}`);
       
       if (!testRunResponse.data || !testRunResponse.data.items) {
-        throw new Error(`Test run ${test_run_key} not found or has no items`);
+        throw new Error(`Test run ${test_run_key} not found or has no items. Response: ${JSON.stringify(testRunResponse.data)}`);
       }
 
       // Find the execution item for the specified test case
       const executionItem = testRunResponse.data.items.find((item: TestExecutionItem) => item.testCaseKey === test_case_key);
       
       if (!executionItem) {
-        throw new Error(`Test case ${test_case_key} not found in test run ${test_run_key}`);
+        const availableKeys = testRunResponse.data.items.map((item: any) => item.testCaseKey);
+        throw new Error(`Test case ${test_case_key} not found in test run ${test_run_key}. Available test cases: ${availableKeys.join(', ')}`);
       }
 
       // Build the update payload and endpoint based on API type
-      const updatePayload: ExecutionUpdatePayload = {};
+      let updatePayload: any = {};
       let updateEndpoint: string;
+      let useHttpMethod: 'put' | 'post' = 'put';
       
       if (this.jiraConfig.type === 'cloud') {
         // Cloud API v2 format
@@ -630,23 +632,34 @@ export class ZephyrToolHandlers {
         updateEndpoint = `/testexecutions/${executionId}`;
       } else {
         // Data Center API v1 format
-        updatePayload.testResultStatus = status;
+        // For Zephyr Scale Data Center, we need to PUT to update individual test result
+        
+        const testResultId = executionItem.id;
+        
+        // Use PUT to update the specific test result
+        updateEndpoint = `${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}/testresults/${testResultId}`;
+        useHttpMethod = 'put';
+        
+        // Build the payload according to Zephyr Scale Data Center API
+        // Use minimal payload with only the fields being updated
+        updatePayload = {
+          status: status
+        };
+        
         if (comment) updatePayload.comment = comment;
         if (execution_time !== undefined) updatePayload.executionTime = execution_time;
         if (actual_end_date) updatePayload.actualEndDate = actual_end_date;
         if (assigned_to) updatePayload.assignedTo = assigned_to;
         if (environment) updatePayload.environment = environment;
         if (custom_fields) updatePayload.customFields = custom_fields;
-        
-        // Data Center uses testResultId
-        const testResultId = executionItem.id;
-        updateEndpoint = `${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}/testresults/${testResultId}`;
       }
 
       // Execute the update
-      const response = await this.axiosInstance.put(updateEndpoint, updatePayload);
+      const response = useHttpMethod === 'put' 
+        ? await this.axiosInstance.put(updateEndpoint, updatePayload)
+        : await this.axiosInstance.post(updateEndpoint, updatePayload);
 
-      if (response.status === 200 || response.status === 204) {
+      if (response.status === 200 || response.status === 201 || response.status === 204) {
         return {
           content: [
             {
@@ -657,7 +670,10 @@ export class ZephyrToolHandlers {
                 newStatus: status,
                 hasComment: !!comment,
                 executionTime: execution_time,
-                environment: environment || 'Not specified'
+                environment: environment || 'Not specified',
+                apiType: this.jiraConfig.type,
+                httpMethod: useHttpMethod,
+                endpoint: updateEndpoint
               }, null, 2)}`,
             },
           ],
