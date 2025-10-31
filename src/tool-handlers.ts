@@ -632,15 +632,9 @@ export class ZephyrToolHandlers {
         updateEndpoint = `/testexecutions/${executionId}`;
       } else {
         // Data Center API v1 format
-        // For Zephyr Scale Data Center, we need to update via testexecution key or id
-        
-        // The execution item might have different identifier fields
-        // Try to find the execution key (like NMSNG-E53) or use ID
-        let executionIdentifier = (executionItem as any).key || executionItem.id;
-        
-        // For Data Center, try using the testexecutions endpoint directly
-        // This is similar to Cloud but uses the Data Center base URL
-        updateEndpoint = `/rest/atm/1.0/testexecution/${executionIdentifier}`;
+        // For Zephyr Scale Data Center, update via testrun/testcase/testresult endpoint
+        // This matches the pattern used in getTestExecution for retrieving test results
+        updateEndpoint = `${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}/testcase/${test_case_key}/testresult`;
         useHttpMethod = 'put';
         
         // Build the payload according to Zephyr Scale Data Center API
