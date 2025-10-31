@@ -78,6 +78,18 @@ export interface AddTestCasesToRunArgs {
   test_case_keys: string[];
 }
 
+export interface UpdateTestExecutionStatusArgs {
+  test_run_key: string;
+  test_case_key: string;
+  status: 'Pass' | 'Fail' | 'Blocked' | 'Not Executed' | 'In Progress';
+  comment?: string;
+  execution_time?: number;
+  actual_end_date?: string;
+  assigned_to?: string;
+  environment?: string;
+  custom_fields?: Record<string, any>;
+}
+
 export type JiraType = 'cloud' | 'datacenter';
 
 export interface ApiEndpoints {
