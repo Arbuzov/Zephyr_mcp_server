@@ -9,6 +9,7 @@ import {
   AddTestCasesToRunArgs,
   UpdateTestExecutionStatusArgs,
   TestExecutionItem,
+  ExecutionUpdatePayload,
   JiraConfig
 } from './types.js';
 import { convertToGherkin, customPriorityMapping, priorityMapping } from './utils.js';
@@ -611,20 +612,8 @@ export class ZephyrToolHandlers {
       }
 
       // Build the update payload and endpoint based on API type
-      let updateEndpoint: string;
-      
-      interface ExecutionUpdatePayload {
-        status?: string;
-        testResultStatus?: string;
-        comment?: string;
-        executionTime?: number;
-        actualEndDate?: string;
-        assignedTo?: string;
-        environment?: string;
-        customFields?: Record<string, any>;
-      }
-      
       const updatePayload: ExecutionUpdatePayload = {};
+      let updateEndpoint: string;
       
       if (this.jiraConfig.type === 'cloud') {
         // Cloud API v2 format

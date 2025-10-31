@@ -97,6 +97,17 @@ export interface TestExecutionItem {
   status?: string;
 }
 
+export interface ExecutionUpdatePayload {
+  status?: string;
+  testResultStatus?: string;
+  comment?: string;
+  executionTime?: number;
+  actualEndDate?: string;
+  assignedTo?: string;
+  environment?: string;
+  customFields?: Record<string, any>;
+}
+
 export type JiraType = 'cloud' | 'datacenter';
 
 export interface ApiEndpoints {
