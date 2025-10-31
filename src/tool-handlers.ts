@@ -8,6 +8,7 @@ import {
   SearchTestCasesArgs,
   AddTestCasesToRunArgs,
   UpdateTestExecutionStatusArgs,
+  TestExecutionItem,
   JiraConfig
 } from './types.js';
 import { convertToGherkin, customPriorityMapping, priorityMapping } from './utils.js';
@@ -603,15 +604,27 @@ export class ZephyrToolHandlers {
       }
 
       // Find the execution item for the specified test case
-      const executionItem = testRunResponse.data.items.find((item: any) => item.testCaseKey === test_case_key);
+      const executionItem = testRunResponse.data.items.find((item: TestExecutionItem) => item.testCaseKey === test_case_key);
       
       if (!executionItem) {
         throw new Error(`Test case ${test_case_key} not found in test run ${test_run_key}`);
       }
 
-      // Build the update payload based on API type
-      let updatePayload: any = {};
+      // Build the update payload and endpoint based on API type
       let updateEndpoint: string;
+      
+      interface ExecutionUpdatePayload {
+        status?: string;
+        testResultStatus?: string;
+        comment?: string;
+        executionTime?: number;
+        actualEndDate?: string;
+        assignedTo?: string;
+        environment?: string;
+        customFields?: Record<string, any>;
+      }
+      
+      const updatePayload: ExecutionUpdatePayload = {};
       
       if (this.jiraConfig.type === 'cloud') {
         // Cloud API v2 format
@@ -623,7 +636,7 @@ export class ZephyrToolHandlers {
         if (environment) updatePayload.environment = environment;
         if (custom_fields) updatePayload.customFields = custom_fields;
         
-        // Cloud uses execution ID directly
+        // Cloud uses execution ID with testexecutions endpoint
         const executionId = executionItem.id;
         updateEndpoint = `/testexecutions/${executionId}`;
       } else {

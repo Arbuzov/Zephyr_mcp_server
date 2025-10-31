@@ -90,6 +90,13 @@ export interface UpdateTestExecutionStatusArgs {
   custom_fields?: Record<string, any>;
 }
 
+export interface TestExecutionItem {
+  id: string | number;
+  testCaseKey: string;
+  testResultStatus?: string;
+  status?: string;
+}
+
 export type JiraType = 'cloud' | 'datacenter';
 
 export interface ApiEndpoints {
