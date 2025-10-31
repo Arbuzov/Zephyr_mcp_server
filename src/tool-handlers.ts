@@ -632,16 +632,18 @@ export class ZephyrToolHandlers {
         updateEndpoint = `/testexecutions/${executionId}`;
       } else {
         // Data Center API v1 format
-        // For Zephyr Scale Data Center, we need to PUT to update individual test result
+        // For Zephyr Scale Data Center, we need to update via testexecution key or id
         
-        const testResultId = executionItem.id;
+        // The execution item might have different identifier fields
+        // Try to find the execution key (like NMSNG-E53) or use ID
+        let executionIdentifier = (executionItem as any).key || executionItem.id;
         
-        // Use PUT to update the specific test result
-        updateEndpoint = `${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}/testresults/${testResultId}`;
+        // For Data Center, try using the testexecutions endpoint directly
+        // This is similar to Cloud but uses the Data Center base URL
+        updateEndpoint = `/rest/atm/1.0/testexecution/${executionIdentifier}`;
         useHttpMethod = 'put';
         
         // Build the payload according to Zephyr Scale Data Center API
-        // Use minimal payload with only the fields being updated
         updatePayload = {
           status: status
         };
@@ -673,7 +675,8 @@ export class ZephyrToolHandlers {
                 environment: environment || 'Not specified',
                 apiType: this.jiraConfig.type,
                 httpMethod: useHttpMethod,
-                endpoint: updateEndpoint
+                endpoint: updateEndpoint,
+                executionId: this.jiraConfig.type === 'datacenter' ? ((executionItem as any).key || executionItem.id) : executionItem.id
               }, null, 2)}`,
             },
           ],
