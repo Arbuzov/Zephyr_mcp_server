@@ -632,15 +632,9 @@ export class ZephyrToolHandlers {
         updateEndpoint = `/testexecutions/${executionId}`;
       } else {
         // Data Center API v1 format
-        // For Zephyr Scale Data Center, we need to update via testexecution key or id
-        
-        // The execution item might have different identifier fields
-        // Try to find the execution key (like NMSNG-E53) or use ID
-        let executionIdentifier = (executionItem as any).key || executionItem.id;
-        
-        // For Data Center, try using the testexecutions endpoint directly
-        // This is similar to Cloud but uses the Data Center base URL
-        updateEndpoint = `/rest/atm/1.0/testexecution/${executionIdentifier}`;
+        // For Zephyr Scale Data Center, update via testrun/testcase/testresult endpoint
+        // This matches the pattern used in getTestExecution for retrieving test results
+        updateEndpoint = `${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}/testcase/${test_case_key}/testresult`;
         useHttpMethod = 'put';
         
         // Build the payload according to Zephyr Scale Data Center API
@@ -662,22 +656,28 @@ export class ZephyrToolHandlers {
         : await this.axiosInstance.post(updateEndpoint, updatePayload);
 
       if (response.status === 200 || response.status === 201 || response.status === 204) {
+        const debugInfo: any = {
+          testCaseKey: test_case_key,
+          testRunKey: test_run_key,
+          newStatus: status,
+          hasComment: !!comment,
+          executionTime: execution_time,
+          environment: environment || 'Not specified',
+          apiType: this.jiraConfig.type,
+          httpMethod: useHttpMethod,
+          endpoint: updateEndpoint
+        };
+        
+        // Only include execution ID for Cloud API where it's used in the endpoint
+        if (this.jiraConfig.type === 'cloud') {
+          debugInfo.executionId = executionItem.id;
+        }
+        
         return {
           content: [
             {
               type: 'text',
-              text: `✅ Successfully updated test execution status for ${test_case_key} in ${test_run_key}\nStatus: ${status}\n${JSON.stringify({
-                testCaseKey: test_case_key,
-                testRunKey: test_run_key,
-                newStatus: status,
-                hasComment: !!comment,
-                executionTime: execution_time,
-                environment: environment || 'Not specified',
-                apiType: this.jiraConfig.type,
-                httpMethod: useHttpMethod,
-                endpoint: updateEndpoint,
-                executionId: this.jiraConfig.type === 'datacenter' ? ((executionItem as any).key || executionItem.id) : executionItem.id
-              }, null, 2)}`,
+              text: `✅ Successfully updated test execution status for ${test_case_key} in ${test_run_key}\nStatus: ${status}\n${JSON.stringify(debugInfo, null, 2)}`,
             },
           ],
         };
