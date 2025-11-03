@@ -629,11 +629,16 @@ export class ZephyrToolHandlers {
       
       // Add step results if provided
       if (step_results && step_results.length > 0) {
-        updatePayload.scriptResults = step_results.map(stepResult => ({
-          index: stepResult.index,
-          status: stepResult.status,
-          comment: stepResult.comment
-        }));
+        updatePayload.scriptResults = step_results.map(stepResult => {
+          const result: any = {
+            index: stepResult.index,
+            status: stepResult.status
+          };
+          if (stepResult.comment) {
+            result.comment = stepResult.comment;
+          }
+          return result;
+        });
       }
       
       if (this.jiraConfig.type === 'cloud') {

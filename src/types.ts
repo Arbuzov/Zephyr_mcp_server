@@ -113,6 +113,11 @@ export interface ExecutionUpdatePayload {
   assignedTo?: string;
   environment?: string;
   customFields?: Record<string, any>;
+  scriptResults?: Array<{
+    index: number;
+    status: string;
+    comment?: string;
+  }>;
 }
 
 export type JiraType = 'cloud' | 'datacenter';
