@@ -630,7 +630,7 @@ export class ZephyrToolHandlers {
       // Add step results if provided
       if (step_results && step_results.length > 0) {
         updatePayload.scriptResults = step_results.map(stepResult => {
-          const result: any = {
+          const result: { index: number; status: string; comment?: string } = {
             index: stepResult.index,
             status: stepResult.status
           };
