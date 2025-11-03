@@ -614,12 +614,13 @@ export class ZephyrToolHandlers {
       }
 
       // Build the update payload and endpoint based on API type
-      let updatePayload: any = {};
+      const updatePayload: ExecutionUpdatePayload = {
+        status: status
+      };
       let updateEndpoint: string;
       let useHttpMethod: 'put' | 'post' = 'put';
       
       // Build common payload fields
-      updatePayload.status = status;
       if (comment) updatePayload.comment = comment;
       if (execution_time !== undefined) updatePayload.executionTime = execution_time;
       if (actual_end_date) updatePayload.actualEndDate = actual_end_date;
