@@ -593,7 +593,8 @@ export class ZephyrToolHandlers {
       actual_end_date,
       assigned_to,
       environment,
-      custom_fields
+      custom_fields,
+      step_results
     } = args;
 
     try {
@@ -627,6 +628,15 @@ export class ZephyrToolHandlers {
         if (environment) updatePayload.environment = environment;
         if (custom_fields) updatePayload.customFields = custom_fields;
         
+        // Add step results if provided
+        if (step_results && step_results.length > 0) {
+          updatePayload.scriptResults = step_results.map(stepResult => ({
+            index: stepResult.index,
+            status: stepResult.status,
+            comment: stepResult.comment
+          }));
+        }
+        
         // Cloud uses execution ID with testexecutions endpoint
         const executionId = executionItem.id;
         updateEndpoint = `/testexecutions/${executionId}`;
@@ -648,6 +658,15 @@ export class ZephyrToolHandlers {
         if (assigned_to) updatePayload.assignedTo = assigned_to;
         if (environment) updatePayload.environment = environment;
         if (custom_fields) updatePayload.customFields = custom_fields;
+        
+        // Add step results if provided
+        if (step_results && step_results.length > 0) {
+          updatePayload.scriptResults = step_results.map(stepResult => ({
+            index: stepResult.index,
+            status: stepResult.status,
+            comment: stepResult.comment
+          }));
+        }
       }
 
       // Execute the update
@@ -663,6 +682,7 @@ export class ZephyrToolHandlers {
           hasComment: !!comment,
           executionTime: execution_time,
           environment: environment || 'Not specified',
+          stepResultsCount: step_results?.length || 0,
           apiType: this.jiraConfig.type,
           httpMethod: useHttpMethod,
           endpoint: updateEndpoint
@@ -677,7 +697,7 @@ export class ZephyrToolHandlers {
           content: [
             {
               type: 'text',
-              text: `✅ Successfully updated test execution status for ${test_case_key} in ${test_run_key}\nStatus: ${status}\n${JSON.stringify(debugInfo, null, 2)}`,
+              text: `✅ Successfully updated test execution status for ${test_case_key} in ${test_run_key}\nStatus: ${status}${step_results && step_results.length > 0 ? `\nUpdated ${step_results.length} step(s)` : ''}\n${JSON.stringify(debugInfo, null, 2)}`,
             },
           ],
         };
