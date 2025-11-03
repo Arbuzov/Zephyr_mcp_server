@@ -140,6 +140,36 @@ The server provides access to various resources through URI schemes:
 ```
 **Note**: This tool allows you to directly update the status of test executions within a test run. Supported statuses are: Pass, Fail, Blocked, Not Executed, and In Progress.
 
+### Update Test Execution with Step Results
+For STEP_BY_STEP test cases, you can set individual step statuses:
+```json
+{
+  "test_run_key": "PROJ-R123",
+  "test_case_key": "PROJ-T123",
+  "status": "Fail",
+  "comment": "Step 2 failed - login button not found",
+  "execution_time": 120000,
+  "step_results": [
+    {
+      "index": 0,
+      "status": "Pass",
+      "comment": "Successfully navigated to login page"
+    },
+    {
+      "index": 1,
+      "status": "Pass",
+      "comment": "Credentials entered successfully"
+    },
+    {
+      "index": 2,
+      "status": "Fail",
+      "comment": "Login button not found on the page"
+    }
+  ]
+}
+```
+**Note**: Step indices are zero-based (0 for first step, 1 for second step, etc.). Each step can have its own status and optional comment.
+
 ## Authentication
 
 The MCP server supports both Jira Cloud and Jira Data Center instances.

@@ -359,7 +359,7 @@ export const toolSchemas = [
   },
   {
     name: 'update_test_execution_status',
-    description: 'Update the execution status of a test case within a test run. This allows you to mark tests as Pass, Fail, Blocked, etc.',
+    description: 'Update the execution status of a test case within a test run. This allows you to mark tests as Pass, Fail, Blocked, etc. For STEP_BY_STEP test cases, you can also set individual step statuses using the step_results parameter.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -400,6 +400,29 @@ export const toolSchemas = [
           type: 'object',
           description: 'Optional custom fields object',
           additionalProperties: true,
+        },
+        step_results: {
+          type: 'array',
+          description: 'Optional array of step results for STEP_BY_STEP test cases. Each step result should specify the step index (starting from 0) and status.',
+          items: {
+            type: 'object',
+            properties: {
+              index: {
+                type: 'number',
+                description: 'Zero-based index of the step (e.g., 0 for first step, 1 for second step)',
+              },
+              status: {
+                type: 'string',
+                description: 'Status for this specific step',
+                enum: ['Pass', 'Fail', 'Blocked', 'Not Executed', 'In Progress'],
+              },
+              comment: {
+                type: 'string',
+                description: 'Optional comment for this specific step',
+              },
+            },
+            required: ['index', 'status'],
+          },
         },
       },
       required: ['test_run_key', 'test_case_key', 'status'],
