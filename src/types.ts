@@ -78,6 +78,12 @@ export interface AddTestCasesToRunArgs {
   test_case_keys: string[];
 }
 
+export interface TestStepResult {
+  index: number;
+  status: 'Pass' | 'Fail' | 'Blocked' | 'Not Executed' | 'In Progress';
+  comment?: string;
+}
+
 export interface UpdateTestExecutionStatusArgs {
   test_run_key: string;
   test_case_key: string;
@@ -88,6 +94,7 @@ export interface UpdateTestExecutionStatusArgs {
   assigned_to?: string;
   environment?: string;
   custom_fields?: Record<string, any>;
+  step_results?: TestStepResult[];
 }
 
 export interface TestExecutionItem {
@@ -106,6 +113,11 @@ export interface ExecutionUpdatePayload {
   assignedTo?: string;
   environment?: string;
   customFields?: Record<string, any>;
+  scriptResults?: Array<{
+    index: number;
+    status: string;
+    comment?: string;
+  }>;
 }
 
 export type JiraType = 'cloud' | 'datacenter';

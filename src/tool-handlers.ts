@@ -593,7 +593,8 @@ export class ZephyrToolHandlers {
       actual_end_date,
       assigned_to,
       environment,
-      custom_fields
+      custom_fields,
+      step_results
     } = args;
 
     try {
@@ -613,20 +614,35 @@ export class ZephyrToolHandlers {
       }
 
       // Build the update payload and endpoint based on API type
-      let updatePayload: any = {};
+      const updatePayload: ExecutionUpdatePayload = {
+        status: status
+      };
       let updateEndpoint: string;
       let useHttpMethod: 'put' | 'post' = 'put';
       
+      // Build common payload fields
+      if (comment) updatePayload.comment = comment;
+      if (execution_time !== undefined) updatePayload.executionTime = execution_time;
+      if (actual_end_date) updatePayload.actualEndDate = actual_end_date;
+      if (assigned_to) updatePayload.assignedTo = assigned_to;
+      if (environment) updatePayload.environment = environment;
+      if (custom_fields) updatePayload.customFields = custom_fields;
+      
+      // Add step results if provided
+      if (step_results && step_results.length > 0) {
+        updatePayload.scriptResults = step_results.map(stepResult => {
+          const result: { index: number; status: string; comment?: string } = {
+            index: stepResult.index,
+            status: stepResult.status
+          };
+          if (stepResult.comment) {
+            result.comment = stepResult.comment;
+          }
+          return result;
+        });
+      }
+      
       if (this.jiraConfig.type === 'cloud') {
-        // Cloud API v2 format
-        updatePayload.status = status;
-        if (comment) updatePayload.comment = comment;
-        if (execution_time !== undefined) updatePayload.executionTime = execution_time;
-        if (actual_end_date) updatePayload.actualEndDate = actual_end_date;
-        if (assigned_to) updatePayload.assignedTo = assigned_to;
-        if (environment) updatePayload.environment = environment;
-        if (custom_fields) updatePayload.customFields = custom_fields;
-        
         // Cloud uses execution ID with testexecutions endpoint
         const executionId = executionItem.id;
         updateEndpoint = `/testexecutions/${executionId}`;
@@ -636,18 +652,6 @@ export class ZephyrToolHandlers {
         // This matches the pattern used in getTestExecution for retrieving test results
         updateEndpoint = `${this.jiraConfig.apiEndpoints.testrun}/${test_run_key}/testcase/${test_case_key}/testresult`;
         useHttpMethod = 'put';
-        
-        // Build the payload according to Zephyr Scale Data Center API
-        updatePayload = {
-          status: status
-        };
-        
-        if (comment) updatePayload.comment = comment;
-        if (execution_time !== undefined) updatePayload.executionTime = execution_time;
-        if (actual_end_date) updatePayload.actualEndDate = actual_end_date;
-        if (assigned_to) updatePayload.assignedTo = assigned_to;
-        if (environment) updatePayload.environment = environment;
-        if (custom_fields) updatePayload.customFields = custom_fields;
       }
 
       // Execute the update
@@ -663,6 +667,7 @@ export class ZephyrToolHandlers {
           hasComment: !!comment,
           executionTime: execution_time,
           environment: environment || 'Not specified',
+          stepResultsCount: step_results?.length || 0,
           apiType: this.jiraConfig.type,
           httpMethod: useHttpMethod,
           endpoint: updateEndpoint
@@ -677,7 +682,7 @@ export class ZephyrToolHandlers {
           content: [
             {
               type: 'text',
-              text: `✅ Successfully updated test execution status for ${test_case_key} in ${test_run_key}\nStatus: ${status}\n${JSON.stringify(debugInfo, null, 2)}`,
+              text: `✅ Successfully updated test execution status for ${test_case_key} in ${test_run_key}\nStatus: ${status}${step_results && step_results.length > 0 ? `\nUpdated ${step_results.length} step(s)` : ''}\n${JSON.stringify(debugInfo, null, 2)}`,
             },
           ],
         };
